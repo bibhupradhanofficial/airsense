@@ -6,25 +6,18 @@ import { useAQIStore } from '@/store/aqiStore';
 import { AQReading } from '@/types/aqi';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
-// We use a simple counter to track how many components are using a specific channel
-const channelUsageCount: Record<string, number> = {};
-
 export function useAQISubscription(locationId?: string) {
     const [isConnected, setIsConnected] = useState(false);
     const [latestReading, setLatestReading] = useState<AQReading | null>(null);
     const setStoreReading = useAQIStore((state) => state.setReading);
     const supabase = createClient();
     const channelRef = useRef<RealtimeChannel | null>(null);
-    const channelId = `aqi-updates-${locationId || 'global'}`;
 
     const subscribe = useCallback(() => {
         if (channelRef.current) return;
 
-        // Increment usage count
-        channelUsageCount[channelId] = (channelUsageCount[channelId] || 0) + 1;
-
         const newChannel = supabase
-            .channel(channelId)
+            .channel(`aqi-updates-${locationId || 'global'}`)
             .on(
                 'postgres_changes',
                 {
@@ -60,38 +53,20 @@ export function useAQISubscription(locationId?: string) {
                     }
                 }
             )
-            .subscribe((status, err) => {
-                if (err) {
-                    console.error(`Supabase Realtime subscription error for ${channelId}:`, err);
-                    setIsConnected(false);
-                    return;
-                }
-
-                const isSubscribed = status === 'SUBSCRIBED';
-                setIsConnected(isSubscribed);
-
-                if (!isSubscribed) {
-                    console.log(`Supabase Realtime status for ${channelId}:`, status);
-                }
+            .subscribe((status) => {
+                setIsConnected(status === 'SUBSCRIBED');
             });
 
         channelRef.current = newChannel;
-    }, [locationId, channelId, supabase, setStoreReading]);
+    }, [locationId, supabase, setStoreReading]);
 
     const unsubscribe = useCallback(() => {
         if (channelRef.current) {
-            // Decrement usage count
-            channelUsageCount[channelId] = Math.max(0, (channelUsageCount[channelId] || 0) - 1);
-
-            // Only remove the channel if no other component is using it
-            if (channelUsageCount[channelId] === 0) {
-                supabase.removeChannel(channelRef.current);
-            }
-
+            supabase.removeChannel(channelRef.current);
             channelRef.current = null;
             setIsConnected(false);
         }
-    }, [supabase, channelId]);
+    }, [supabase]);
 
     useEffect(() => {
         subscribe();
