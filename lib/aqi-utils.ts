@@ -26,18 +26,26 @@ export const getAQIDisplay = (aqi: number): AQIDisplay => {
     }
 };
 
+import { resolveUserLocation as realResolveUserLocation } from './api-clients/geocoding';
+
 export const resolveUserLocation = async (): Promise<{ name: string; lat: number; lng: number; aqi: number }> => {
-    // Mocking user location resolution
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve({
-                name: 'New Delhi',
-                lat: 28.6139,
-                lng: 77.2090,
-                aqi: 165
-            });
-        }, 1000);
-    });
+    try {
+        const result = await realResolveUserLocation();
+        return {
+            name: result.locationInfo.city || result.locationInfo.display_name.split(',')[0],
+            lat: result.lat,
+            lng: result.lon,
+            aqi: 165 // Still mocking AQI for now as we don't have a direct "get city AQI" utility easily accessible here without more logic
+        };
+    } catch (error) {
+        console.error("Failed to resolve user location:", error);
+        return {
+            name: 'New Delhi',
+            lat: 28.6139,
+            lng: 77.2090,
+            aqi: 165
+        };
+    }
 };
 
 export const getPollutantStatus = (name: string, value: number): 'Safe' | 'Elevated' | 'High' => {

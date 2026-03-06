@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { LocalHealthAdvisory } from '@/components/citizen/LocalHealthAdvisory';
 import { RiskAssessmentWidget } from '@/components/citizen/RiskAssessmentWidget';
 import { PollutantEncyclopedia } from '@/components/citizen/PollutantEncyclopedia';
 import { AQIScaleExplainer } from '@/components/citizen/AQIScaleExplainer';
@@ -25,6 +26,10 @@ export default function HealthGuidePage() {
                 <p className="text-zinc-500 max-w-2xl mx-auto text-lg leading-relaxed">
                     Air quality impacts everyone differently. Learn how to protect yourself and your family with science-backed health strategies.
                 </p>
+            </section>
+
+            <section className="space-y-4">
+                <LocalHealthAdvisory />
             </section>
 
             {/* Risk Assessment Widget - Priority 1 */}

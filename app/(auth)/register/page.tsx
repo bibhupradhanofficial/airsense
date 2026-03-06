@@ -184,11 +184,13 @@ export default function RegisterPage() {
                             <Label htmlFor="fullName" className="text-xs uppercase tracking-wider text-gray-500 font-bold">Full Name</Label>
                             <Input
                                 id="fullName"
+                                name="name"
                                 type="text"
                                 placeholder="Enter your full name"
                                 value={fullName}
                                 onChange={(e) => setFullName(e.target.value)}
                                 required
+                                autoComplete="name"
                                 disabled={!!inviteData || loading}
                                 className="bg-[#0A1628] border-gray-800 focus:border-cyan-500/50 h-11 text-white"
                             />
@@ -198,11 +200,13 @@ export default function RegisterPage() {
                             <Label htmlFor="email" className="text-xs uppercase tracking-wider text-gray-500 font-bold">Email</Label>
                             <Input
                                 id="email"
+                                name="email"
                                 type="email"
                                 placeholder="name@municipality.gov"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
+                                autoComplete="email"
                                 disabled={!!inviteData || loading}
                                 className="bg-[#0A1628] border-gray-800 focus:border-cyan-500/50 h-11 text-white"
                             />
@@ -212,11 +216,13 @@ export default function RegisterPage() {
                             <Label htmlFor="password" className="text-xs uppercase tracking-wider text-gray-500 font-bold">Password</Label>
                             <Input
                                 id="password"
+                                name="password"
                                 type="password"
                                 placeholder="8+ characters"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
+                                autoComplete="new-password"
                                 disabled={!!inviteData || loading}
                                 className="bg-[#0A1628] border-gray-800 focus:border-cyan-500/50 h-11 text-white"
                             />
@@ -251,10 +257,12 @@ export default function RegisterPage() {
                             <Label htmlFor="confirmPassword" className="text-xs uppercase tracking-wider text-gray-500 font-bold">Confirm Password</Label>
                             <Input
                                 id="confirmPassword"
+                                name="confirm-password"
                                 type="password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 required
+                                autoComplete="new-password"
                                 disabled={!!inviteData || loading}
                                 className="bg-[#0A1628] border-gray-800 focus:border-cyan-500/50 h-11 text-white"
                             />

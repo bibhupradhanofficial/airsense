@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { LineChart, Line, ResponsiveContainer, YAxis } from 'recharts';
-import { getAQICategory, getAQIColor } from '@/lib/utils/aqi';
+import { getAQICategory, getAQIColor, getAQIHex } from '@/lib/utils/aqi';
 import { AlertTriangle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAdminContext } from '@/lib/admin/useAdminContext';
@@ -110,7 +110,7 @@ export function PollutedWards() {
                                                 <Line
                                                     type="monotone"
                                                     dataKey="aqi"
-                                                    stroke={ward.currentAqi > 300 ? '#ef4444' : '#f97316'}
+                                                    stroke={getAQIHex(ward.currentAqi)}
                                                     strokeWidth={2}
                                                     dot={false}
                                                 />
@@ -119,9 +119,14 @@ export function PollutedWards() {
                                     </div>
 
                                     {/* Current AQI Badge */}
-                                    <div className={`px-2 py-0.5 rounded text-[11px] font-black ${getAQIColor(ward.currentAqi)} text-black min-w-[40px] text-center shadow-sm`}>
-                                        {ward.currentAqi}
-                                    </div>
+                                    {(() => {
+                                        const colorObj = getAQIColor(ward.currentAqi);
+                                        return (
+                                            <div className={`px-2 py-0.5 rounded text-[11px] font-black ${colorObj.bg} ${colorObj.text} min-w-[40px] text-center shadow-sm`}>
+                                                {ward.currentAqi}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         ))}

@@ -288,6 +288,14 @@ export default function AboutPage() {
                                 </tbody>
                             </table>
                         </div>
+
+                        <div className="mt-12 text-center">
+                            <Button asChild variant="outline" className="border-teal-600 text-teal-600 hover:bg-teal-50 font-bold px-8">
+                                <Link href="/data-sources">
+                                    Explore Detailed Methodology <ArrowRight className="ml-2 h-4 w-4" />
+                                </Link>
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </section>

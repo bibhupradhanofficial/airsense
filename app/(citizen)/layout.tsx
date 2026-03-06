@@ -24,11 +24,12 @@ export default function CitizenLayout({
                         </Link>
                     </div>
 
-                    <nav className="hidden items-center gap-8 md:flex">
+                    <nav className="hidden items-center gap-8 md:flex text-nowrap">
                         <Link href="/" className="text-sm font-semibold text-zinc-600 hover:text-teal-600 transition-colors">Home</Link>
                         <Link href="/search" className="text-sm font-semibold text-zinc-600 hover:text-teal-600 transition-colors">Search</Link>
-                        <Link href="/about" className="text-sm font-semibold text-zinc-600 hover:text-teal-600 transition-colors">About</Link>
                         <Link href="/health-guide" className="text-sm font-semibold text-zinc-600 hover:text-teal-600 transition-colors">Health Guide</Link>
+                        <Link href="/data-sources" className="text-sm font-semibold text-zinc-600 hover:text-teal-600 transition-colors">Data Sources</Link>
+                        <Link href="/about" className="text-sm font-semibold text-zinc-600 hover:text-teal-600 transition-colors">About</Link>
                     </nav>
 
                     <div className="flex items-center gap-4">

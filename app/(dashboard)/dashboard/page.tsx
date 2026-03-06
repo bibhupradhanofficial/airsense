@@ -79,22 +79,25 @@ export default function AdminDashboardOverview() {
                         <LatestPolicy />
                     </div>
 
-                    {/* Mid: Wards List (Prio 2) */}
-                    <div className="flex-[0.3] min-h-0">
+                    {/* Mid: Wards List (Prio 2) - Increased height to show all 5 cities */}
+                    <div className="flex-[0.6] min-h-0">
                         <PollutedWards />
-                    </div>
-
-                    {/* Bottom: Sources Pie (Prio 3) */}
-                    <div className="flex-[0.3] min-h-0 border border-[#1e2a3b] rounded-xl overflow-hidden">
-                        <SourcesChart />
                     </div>
                 </div>
 
             </div>
 
-            {/* 3. Bottom Trend Chart Row */}
-            <div className="w-full min-h-[300px]">
-                <TrendChart />
+            {/* 3. Bottom Row: Sources (Left) and Trend (Right) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[350px]">
+                {/* Sources Chart (Left side of Trend) */}
+                <div className="lg:col-span-4 overflow-hidden">
+                    <SourcesChart />
+                </div>
+
+                {/* Trend Chart (Right side) */}
+                <div className="lg:col-span-8">
+                    <TrendChart />
+                </div>
             </div>
 
         </div>
