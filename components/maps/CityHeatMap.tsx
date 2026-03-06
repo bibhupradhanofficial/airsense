@@ -91,7 +91,8 @@ export function CityHeatMap() {
             const maxLng = viewState.longitude + delta;
             const maxLat = viewState.latitude + delta;
 
-            const res = await fetch(`/api/interpolate?minLng=${minLng}&minLat=${minLat}&maxLng=${maxLng}&maxLat=${maxLat}&resolution=20`);
+            const bbox = `${minLat},${minLng},${maxLat},${maxLng}`;
+            const res = await fetch(`/api/interpolate?bbox=${bbox}&resolution=0.01`);
             if (!res.ok) throw new Error('Failed to fetch heatmap grid');
             return res.json();
         },

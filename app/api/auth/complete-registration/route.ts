@@ -25,8 +25,6 @@ export async function POST(request: Request) {
         }
 
         // Upsert profile
-        // Note: full_name is not currently in the user_profiles table schema based on database.ts
-        // We will store it in the user's role and handle other fields.
         const { error: profileError } = await supabase
             .from('user_profiles')
             .upsert({

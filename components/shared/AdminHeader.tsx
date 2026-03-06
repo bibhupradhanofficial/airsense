@@ -25,11 +25,11 @@ export function AdminHeader() {
     const supabase = createClient();
     const [currentTime, setCurrentTime] = useState<Date | null>(null);
     const { isConnected } = useAQISubscription();
-    const { adminContext, isSuperAdmin, isCityAdmin, cityName } = useAdminContext();
+    const { adminContext, isCentralAdmin, isCityAdmin, cityName } = useAdminContext();
     const { selectedCityId, setSelectedCityId } = useAdminStore();
     const unreadNotifications = 3;
 
-    // Fetch available cities for Super Admin
+    // Fetch available cities for Central Admin
     const { data: cities, isLoading: isCitiesLoading } = useQuery({
         queryKey: ['available-cities'],
         queryFn: async () => {
@@ -75,7 +75,7 @@ export function AdminHeader() {
                 ...cityList
             ];
         },
-        enabled: isSuperAdmin
+        enabled: isCentralAdmin
     });
 
     useEffect(() => {
@@ -87,7 +87,7 @@ export function AdminHeader() {
         return () => clearInterval(timer);
     }, []);
 
-    const currentCity = isSuperAdmin
+    const currentCity = isCentralAdmin
         ? (cities?.find(c => c.id === (selectedCityId || 'all')) || { name: 'All Cities', aqi: 0 })
         : { name: cityName, aqi: 0 };
 
@@ -115,7 +115,7 @@ export function AdminHeader() {
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
-                ) : isSuperAdmin ? (
+                ) : isCentralAdmin ? (
                     <DropdownMenu>
                         <DropdownMenuTrigger className="flex items-center space-x-2 bg-[#132238] border border-[#1e2a3b] hover:border-[#2a3b50] transition-colors rounded-lg px-4 py-2 outline-none group min-w-[200px]">
                             {isCitiesLoading ? (

@@ -21,10 +21,10 @@ const COLORS = {
 
 export function SourcesChart() {
     const supabase = createClient();
-    const { adminContext, isSuperAdmin, cityName } = useAdminContext();
+    const { adminContext, isCentralAdmin, cityName } = useAdminContext();
     const { selectedCityId } = useAdminStore();
 
-    const activeCity = isSuperAdmin ? (selectedCityId || 'National') : cityName;
+    const activeCity = isCentralAdmin ? (selectedCityId || 'National') : cityName;
 
     const { data: sources, isLoading } = useQuery({
         queryKey: ['pollution-sources-stats', adminContext?.type, selectedCityId],
@@ -36,10 +36,9 @@ export function SourcesChart() {
                 .select(`
                     id,
                     source_type,
-                    intensity_score,
+                    confidence_score,
                     locations ( city )
-                `)
-                .eq('is_verified', true);
+                `);
 
             query = applyCityFilter(query, adminContext, selectedCityId);
 
@@ -52,7 +51,7 @@ export function SourcesChart() {
             const counts: Record<string, number> = {};
             readings.forEach(d => {
                 const type = d.source_type.toUpperCase().replace(' ', '_');
-                counts[type] = (counts[type] || 0) + 1;
+                counts[type] = (counts[type] || 0) + (d.confidence_score || 1);
             });
 
             const formatted = Object.entries(counts).map(([name, value]) => ({

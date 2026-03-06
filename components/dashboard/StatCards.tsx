@@ -12,7 +12,7 @@ import { applyCityFilter } from '@/lib/admin/queryHelpers';
 
 export function StatCards() {
     const supabase = createClient();
-    const { adminContext, isSuperAdmin } = useAdminContext();
+    const { adminContext, isCentralAdmin } = useAdminContext();
     const { selectedCityId } = useAdminStore();
 
     const { data: stats, isLoading } = useQuery({
@@ -55,7 +55,7 @@ export function StatCards() {
 
             // 4. Cities Monitored (Super Admin ONLY)
             let citiesCount = 0;
-            if (isSuperAdmin && !selectedCityId) {
+            if (isCentralAdmin && !selectedCityId) {
                 const { data: locations } = await supabase
                     .from('locations')
                     .select('city');
@@ -87,7 +87,7 @@ export function StatCards() {
     }
 
     const aqiColorClass = getAQIColor(stats.aqi);
-    const isNationalView = isSuperAdmin && !selectedCityId;
+    const isNationalView = isCentralAdmin && !selectedCityId;
 
     return (
         <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${isNationalView ? '4' : '3'} gap-6 mb-6`}>

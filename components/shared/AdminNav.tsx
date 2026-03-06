@@ -64,8 +64,8 @@ export function AdminNav() {
         }
     };
 
-    const isAdminSuper = adminContext?.type === 'super_admin';
-    const isImpersonating = isAdminSuper && selectedCityId;
+    const isAdminCentral = adminContext?.type === 'central_admin';
+    const isImpersonating = isAdminCentral && selectedCityId;
     const initials = fullName ? fullName.split(' ').map(n => n[0]).join('').toUpperCase() : 'A';
 
     return (
@@ -126,11 +126,11 @@ export function AdminNav() {
                             </p>
                             <span className={cn(
                                 "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tight mt-1 border",
-                                isAdminSuper
+                                isAdminCentral
                                     ? "bg-amber-500/10 text-amber-500 border-amber-500/30"
                                     : "bg-[#00D4FF]/10 text-[#00D4FF] border-[#00D4FF]/30"
                             )}>
-                                {isAdminSuper ? 'Central Admin' : `${profile?.assigned_city_name || 'City'} Admin`}
+                                {isAdminCentral ? 'Central Admin' : `${profile?.assigned_city_name || 'City'} Admin`}
                             </span>
                         </div>
                     </div>

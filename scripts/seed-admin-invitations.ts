@@ -30,19 +30,19 @@ const cities = [
 async function seed() {
     console.log('Starting seed process...');
 
-    // 1. Super Admin Invitation
+    // 1. Central Admin Invitation
     const { error: superError } = await supabase
         .from('admin_invitations')
         .upsert({
-            invite_code: 'AIRSENSE_SUPER_2024',
-            admin_type: 'super_admin',
+            invite_code: 'CENTRAL_ADMIN',
+            admin_type: 'central_admin',
             expires_at: '2099-12-31T23:59:59Z',
         }, { onConflict: 'invite_code' });
 
     if (superError) {
         console.error('Error creating super admin invite:', superError);
     } else {
-        console.log('Super Admin invite created/updated.');
+        console.log('Central Admin invite created/updated.');
     }
 
     // 2. City Admin Invitations

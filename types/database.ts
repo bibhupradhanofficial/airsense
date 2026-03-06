@@ -195,7 +195,7 @@ export interface Database {
                     role: Database['public']['Enums']['user_role'] | null
                     preferred_location_id: string | null
                     notification_enabled: boolean | null
-                    admin_type: 'city_admin' | 'super_admin' | null
+                    admin_type: 'city_admin' | 'central_admin' | null
                     assigned_city_id: string | null
                     assigned_city_name: string | null
                     is_active: boolean
@@ -208,7 +208,7 @@ export interface Database {
                     role?: Database['public']['Enums']['user_role'] | null
                     preferred_location_id?: string | null
                     notification_enabled?: boolean | null
-                    admin_type?: 'city_admin' | 'super_admin' | null
+                    admin_type?: 'city_admin' | 'central_admin' | null
                     assigned_city_id?: string | null
                     assigned_city_name?: string | null
                     is_active?: boolean
@@ -221,7 +221,7 @@ export interface Database {
                     role?: Database['public']['Enums']['user_role'] | null
                     preferred_location_id?: string | null
                     notification_enabled?: boolean | null
-                    admin_type?: 'city_admin' | 'super_admin' | null
+                    admin_type?: 'city_admin' | 'central_admin' | null
                     assigned_city_id?: string | null
                     assigned_city_name?: string | null
                     is_active?: boolean
@@ -254,7 +254,7 @@ export interface Database {
                 Row: {
                     id: string
                     invite_code: string
-                    admin_type: 'city_admin' | 'super_admin'
+                    admin_type: 'city_admin' | 'central_admin'
                     assigned_city_id: string | null
                     assigned_city_name: string | null
                     used_by: string | null
@@ -265,7 +265,7 @@ export interface Database {
                 Insert: {
                     id?: string
                     invite_code: string
-                    admin_type: 'city_admin' | 'super_admin'
+                    admin_type: 'city_admin' | 'central_admin'
                     assigned_city_id?: string | null
                     assigned_city_name?: string | null
                     used_by?: string | null
@@ -276,7 +276,7 @@ export interface Database {
                 Update: {
                     id?: string
                     invite_code?: string
-                    admin_type?: 'city_admin' | 'super_admin'
+                    admin_type?: 'city_admin' | 'central_admin'
                     assigned_city_id?: string | null
                     assigned_city_name?: string | null
                     used_by?: string | null

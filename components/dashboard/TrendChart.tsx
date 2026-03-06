@@ -12,7 +12,7 @@ import { format, subDays, startOfDay } from 'date-fns';
 
 export function TrendChart() {
     const supabase = createClient();
-    const { adminContext, isSuperAdmin } = useAdminContext();
+    const { adminContext, isCentralAdmin } = useAdminContext();
     const { selectedCityId } = useAdminStore();
 
     const { data: trendData, isLoading } = useQuery({
@@ -65,7 +65,7 @@ export function TrendChart() {
         enabled: !!adminContext,
     });
 
-    const isAllCities = isSuperAdmin && !selectedCityId;
+    const isAllCities = isCentralAdmin && !selectedCityId;
 
     return (
         <Card className="bg-[#132238] border-[#1e2a3b] shadow-2xl h-full flex flex-col">

@@ -28,10 +28,10 @@ import { SourcesChart } from '@/components/dashboard/SourcesChart';
 import { TrendChart } from '@/components/dashboard/TrendChart';
 
 export default function AdminDashboardOverview() {
-    const { fullName, isSuperAdmin, isCityAdmin, cityName } = useAdminContext();
+    const { fullName, isCentralAdmin, isCityAdmin, cityName } = useAdminContext();
     const { selectedCityId } = useAdminStore();
 
-    const isAllCities = isSuperAdmin && !selectedCityId;
+    const isAllCities = isCentralAdmin && !selectedCityId;
 
     return (
         <div className="w-full h-full flex flex-col space-y-6">
@@ -44,14 +44,14 @@ export default function AdminDashboardOverview() {
                 </div>
             )}
 
-            {isSuperAdmin && !selectedCityId && (
+            {isCentralAdmin && !selectedCityId && (
                 <div className="bg-blue-600/10 border border-blue-600/20 rounded-xl p-4">
                     <h2 className="text-white font-bold text-lg">⚡ Central Administration Dashboard — All Cities</h2>
                     <p className="text-gray-400 text-sm">Monitoring national data across India</p>
                 </div>
             )}
 
-            {isSuperAdmin && selectedCityId && (
+            {isCentralAdmin && selectedCityId && (
                 <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl p-4 flex items-center justify-between">
                     <div>
                         <h2 className="text-white font-bold text-lg">🏛️ {fullName} — {selectedCityId} Dashboard</h2>

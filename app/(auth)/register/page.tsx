@@ -171,8 +171,8 @@ export default function RegisterPage() {
                                     <p className="text-xs text-green-500/80 leading-relaxed mt-1">
                                         You will be registered as: <br />
                                         <span className="font-bold text-green-300">
-                                            {inviteData.admin_type === 'super_admin'
-                                                ? 'Central Super Admin'
+                                            {inviteData.admin_type === 'central_admin'
+                                                ? 'Central Admin'
                                                 : `City Admin for ${inviteData.city_name || 'Assigned City'}`}
                                         </span>
                                     </p>

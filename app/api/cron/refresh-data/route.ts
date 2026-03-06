@@ -31,7 +31,7 @@ async function handleRequest(request: NextRequest) {
                 .eq('id', user.id)
                 .single();
 
-            if (profile?.admin_type === 'super_admin') {
+            if (profile?.admin_type === 'central_admin') {
                 isAuthorized = true;
             }
         }

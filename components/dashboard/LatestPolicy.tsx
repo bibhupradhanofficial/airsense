@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 export function LatestPolicy() {
     const queryClient = useQueryClient();
     const supabase = createClient();
-    const { adminContext, isSuperAdmin } = useAdminContext();
+    const { adminContext, isCentralAdmin } = useAdminContext();
     const { selectedCityId } = useAdminStore();
 
     const { data: policy, isLoading } = useQuery({
@@ -46,7 +46,7 @@ export function LatestPolicy() {
     });
 
     const updateStatus = useMutation({
-        mutationFn: async ({ id, status }: { id: string, status: 'implemented' | 'dismissed' }) => {
+        mutationFn: async ({ id, status }: { id: string, status: 'actioned' | 'dismissed' }) => {
             const { error } = await supabase
                 .from('policy_recommendations')
                 .update({ status: status as any })
@@ -67,7 +67,7 @@ export function LatestPolicy() {
             <CardHeader className="p-4 border-b border-[#00D4FF]/20 relative z-10">
                 <CardTitle className="text-sm font-bold text-[#00D4FF] flex items-center uppercase tracking-wider">
                     <ShieldAlert className="h-4 w-4 mr-2" />
-                    {isSuperAdmin && !selectedCityId ? 'National Policy Alerts' : 'Local Policy Action Required'}
+                    {isCentralAdmin && !selectedCityId ? 'National Policy Alerts' : 'Local Policy Action Required'}
                 </CardTitle>
             </CardHeader>
 
@@ -115,7 +115,7 @@ export function LatestPolicy() {
             {policy && (
                 <CardFooter className="p-4 pt-0 border-t border-[#00D4FF]/20 relative z-10 mt-auto flex gap-3">
                     <Button
-                        onClick={() => updateStatus.mutate({ id: policy.id, status: 'implemented' })}
+                        onClick={() => updateStatus.mutate({ id: policy.id, status: 'actioned' })}
                         disabled={updateStatus.isPending}
                         className="flex-1 bg-[#00D4FF] hover:bg-[#00b0d6] text-black font-bold h-9 text-xs"
                     >

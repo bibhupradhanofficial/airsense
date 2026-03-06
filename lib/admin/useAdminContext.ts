@@ -54,7 +54,7 @@ export function useAdminContext() {
         fullName,
         email,
         isLoading,
-        isSuperAdmin: adminContext?.type === 'super_admin',
+        isCentralAdmin: adminContext?.type === 'central_admin',
         isCityAdmin: adminContext?.type === 'city_admin',
         cityName: adminContext?.type === 'city_admin' ? adminContext.cityFilter.name : null
     };
