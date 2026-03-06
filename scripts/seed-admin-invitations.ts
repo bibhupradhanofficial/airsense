@@ -72,7 +72,7 @@ async function seed() {
         const { error: inviteError } = await supabase
             .from('admin_invitations')
             .upsert({
-                invite_code: `CITY_AIRSENSE_${city.code}`,
+                invite_code: `CITY_ADMIN_${city.code}`,
                 admin_type: 'city_admin',
                 assigned_city_id,
                 assigned_city_name,

@@ -37,7 +37,7 @@ export function SourcesChart() {
                     id,
                     source_type,
                     confidence_score,
-                    locations ( city )
+                    locations!inner ( city )
                 `);
 
             query = applyCityFilter(query, adminContext, selectedCityId);

@@ -27,7 +27,7 @@ export function TrendChart() {
                 .select(`
                     aqi_value,
                     recorded_at,
-                    locations ( city )
+                    locations!inner ( city )
                 `)
                 .gte('recorded_at', sevenDaysAgo)
                 .order('recorded_at', { ascending: true });

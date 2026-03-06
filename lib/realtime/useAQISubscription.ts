@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAQIStore } from '@/store/aqiStore';
 import { AQReading } from '@/types/aqi';
@@ -11,13 +11,13 @@ export function useAQISubscription(locationId?: string) {
     const [latestReading, setLatestReading] = useState<AQReading | null>(null);
     const setStoreReading = useAQIStore((state) => state.setReading);
     const supabase = createClient();
-    const [channel, setChannel] = useState<RealtimeChannel | null>(null);
+    const channelRef = useRef<RealtimeChannel | null>(null);
 
     const subscribe = useCallback(() => {
-        if (channel) return;
+        if (channelRef.current) return;
 
         const newChannel = supabase
-            .channel('aqi-updates')
+            .channel(`aqi-updates-${locationId || 'global'}`)
             .on(
                 'postgres_changes',
                 {
@@ -57,16 +57,16 @@ export function useAQISubscription(locationId?: string) {
                 setIsConnected(status === 'SUBSCRIBED');
             });
 
-        setChannel(newChannel);
-    }, [locationId, channel, supabase, setStoreReading]);
+        channelRef.current = newChannel;
+    }, [locationId, supabase, setStoreReading]);
 
     const unsubscribe = useCallback(() => {
-        if (channel) {
-            supabase.removeChannel(channel);
-            setChannel(null);
+        if (channelRef.current) {
+            supabase.removeChannel(channelRef.current);
+            channelRef.current = null;
             setIsConnected(false);
         }
-    }, [channel, supabase]);
+    }, [supabase]);
 
     useEffect(() => {
         subscribe();

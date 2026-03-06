@@ -73,7 +73,8 @@ export function CityHeatMap() {
             if (!adminContext) return [];
 
             let query = supabase.from('locations').select('*');
-            query = applyCityFilter(query, adminContext, selectedCityId);
+            query = applyCityFilter(query, adminContext, selectedCityId, true);
+
 
             const { data, error } = await query;
             if (error) throw error;

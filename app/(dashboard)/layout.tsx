@@ -18,14 +18,8 @@ export default function DashboardLayout({
     useSessionGuard();
 
     // 2. Hydrate Global Store
-    const { profile, adminContext } = useAdminContext();
-    const { setAdminContext, selectedCityId, setSelectedCityId } = useAdminStore();
-
-    useEffect(() => {
-        if (profile && adminContext) {
-            setAdminContext(adminContext, profile);
-        }
-    }, [profile, adminContext, setAdminContext]);
+    const { profile, adminContext, isLoading } = useAdminContext();
+    const { selectedCityId, setSelectedCityId } = useAdminStore();
 
     const isImpersonating = adminContext?.type === 'central_admin' && selectedCityId;
 

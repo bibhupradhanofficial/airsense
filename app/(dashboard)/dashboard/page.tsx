@@ -73,19 +73,19 @@ export default function AdminDashboardOverview() {
                 </div>
 
                 {/* Side Panels (takes 5 columns ~40%) */}
-                <div className="lg:col-span-4 flex flex-col space-y-6 h-full">
+                <div className="lg:col-span-4 flex flex-col space-y-6 h-full min-h-0">
                     {/* Top: GenAI Policy Card (Prio 1) */}
-                    <div className="flex-[0.4]">
+                    <div className="flex-[0.4] min-h-0">
                         <LatestPolicy />
                     </div>
 
                     {/* Mid: Wards List (Prio 2) */}
-                    <div className="flex-[0.3]">
+                    <div className="flex-[0.3] min-h-0">
                         <PollutedWards />
                     </div>
 
                     {/* Bottom: Sources Pie (Prio 3) */}
-                    <div className="flex-[0.3]">
+                    <div className="flex-[0.3] min-h-0 border border-[#1e2a3b] rounded-xl overflow-hidden">
                         <SourcesChart />
                     </div>
                 </div>

@@ -15,7 +15,7 @@ export async function POST(request: Request) {
         const { data: invitation, error: inviteError } = await supabase
             .from('admin_invitations')
             .select('*')
-            .eq('invite_code', invite_code.toUpperCase())
+            .eq('invite_code', invite_code.trim().toUpperCase())
             .is('used_by', null)
             .gt('expires_at', new Date().toISOString())
             .single();

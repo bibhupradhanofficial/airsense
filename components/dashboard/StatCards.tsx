@@ -23,7 +23,7 @@ export function StatCards() {
             // 1. Fetch Policy Actions count with filter
             let policyQuery = supabase
                 .from('policy_recommendations')
-                .select('*', { count: 'exact', head: true })
+                .select('*, locations!inner(city)', { count: 'exact', head: true })
                 .eq('status', 'pending');
 
             policyQuery = applyCityFilter(policyQuery, adminContext, selectedCityId);
@@ -32,7 +32,7 @@ export function StatCards() {
             // 2. Fetch Active Anomalies (AQI > 300 as proxy for critical anomalies)
             let anomalyQuery = supabase
                 .from('aqi_readings')
-                .select('id')
+                .select('id, locations!inner(city)')
                 .gte('recorded_at', new Date(Date.now() - 3600000).toISOString())
                 .gte('aqi_value', 300);
 
@@ -43,7 +43,7 @@ export function StatCards() {
             // 3. Average AQI for current scope
             let aqiQuery = supabase
                 .from('aqi_readings')
-                .select('aqi_value')
+                .select('aqi_value, locations!inner(city)')
                 .order('recorded_at', { ascending: false })
                 .limit(50);
 

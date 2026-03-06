@@ -46,7 +46,7 @@ export default function WardAnalysisPage() {
 
             // 1. Fetch locations in the city
             let locQuery = supabase.from('locations').select('*');
-            locQuery = applyCityFilter(locQuery, adminContext, selectedCityId);
+            locQuery = applyCityFilter(locQuery, adminContext, selectedCityId, true);
             const { data: locations, error: locError } = await locQuery;
             if (locError) throw locError;
             if (!locations.length) return [];

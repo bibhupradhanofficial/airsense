@@ -29,7 +29,7 @@ export function LatestPolicy() {
                     recommendation_text,
                     status,
                     created_at,
-                    locations ( name, city )
+                    locations!inner ( name, city )
                 `)
                 .eq('status', 'pending')
                 .order('created_at', { ascending: false });

@@ -47,7 +47,7 @@ export default function SourceDetectionPage() {
 
             // 1. Get locations
             let locQuery = supabase.from('locations').select('*');
-            locQuery = applyCityFilter(locQuery, adminContext, selectedCityId);
+            locQuery = applyCityFilter(locQuery, adminContext, selectedCityId, true);
             const { data: locations, error: locError } = await locQuery;
             if (locError) throw locError;
             if (!locations.length) return [];

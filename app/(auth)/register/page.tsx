@@ -70,7 +70,7 @@ export default function RegisterPage() {
                 const res = await fetch('/api/auth/validate-invite', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ invite_code: inviteCode.toUpperCase() }),
+                    body: JSON.stringify({ invite_code: inviteCode.trim().toUpperCase() }),
                 });
 
                 if (!res.ok) {
@@ -111,7 +111,7 @@ export default function RegisterPage() {
                     body: JSON.stringify({
                         user_id: signUpData.user.id,
                         full_name: fullName,
-                        invite_code: inviteCode.toUpperCase()
+                        invite_code: inviteCode.trim().toUpperCase()
                     }),
                 });
 
@@ -279,7 +279,7 @@ export default function RegisterPage() {
                                 type="text"
                                 placeholder="ENTER CODE"
                                 value={inviteCode}
-                                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                                onChange={(e) => setInviteCode(e.target.value.trim().toUpperCase())}
                                 required
                                 disabled={!!inviteData || loading}
                                 className="bg-[#0A1628] border-gray-800 focus:border-cyan-500/50 h-11 uppercase tracking-widest font-mono text-white"

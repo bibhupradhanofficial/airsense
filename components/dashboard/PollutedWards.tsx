@@ -28,7 +28,7 @@ export function PollutedWards() {
                     aqi_value,
                     recorded_at,
                     location_id,
-                    locations ( 
+                    locations!inner ( 
                         name, 
                         city
                     )

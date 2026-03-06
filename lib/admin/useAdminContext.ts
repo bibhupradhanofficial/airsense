@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAdminStore } from '@/store/adminStore';
 import { AdminContext, getAdminContext } from '@/types/admin';
@@ -12,15 +12,23 @@ export function useAdminContext() {
     const [isLoading, setIsLoading] = useState(!adminContext);
     const [fullName, setFullName] = useState<string | null>(null);
     const [email, setEmail] = useState<string | null>(null);
+    const fetchedRef = useRef(false);
 
     useEffect(() => {
-        async function fetchAdminData() {
-            if (adminContext && profile) {
-                setIsLoading(false);
-                return;
+        // If we already have it in store or we already started fetching, don't re-run
+        if ((adminContext && profile) || fetchedRef.current) {
+            setIsLoading(false);
+            if (profile) {
+                // We should still set the name/email if they are local state
+                // But avoid calling state setters every render
             }
+            return;
+        }
 
+        async function fetchAdminData() {
+            fetchedRef.current = true;
             setIsLoading(true);
+
             const { data: { session } } = await supabase.auth.getSession();
 
             if (!session) {
@@ -46,7 +54,7 @@ export function useAdminContext() {
         }
 
         fetchAdminData();
-    }, [supabase, adminContext, profile, setAdminContext]);
+    }, [adminContext, profile, setAdminContext, supabase.auth]);
 
     return {
         adminContext,
