@@ -13,8 +13,11 @@ import { useAdminStore } from '@/store/adminStore';
 import { applyCityFilter } from '@/lib/admin/queryHelpers';
 
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { Layers } from 'lucide-react';
+import { Layers, Flame } from 'lucide-react';
 import { AQIColorScale } from '@/components/shared/AQIColorScale';
+import { formatDistanceToNow } from 'date-fns';
+
+import { useDebounce } from '@/lib/hooks/useDebounce'; // Assuming this exists or I'll implement inline
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
@@ -61,6 +64,10 @@ export function CityHeatMap() {
     }, [activeCity]);
 
     const [activeLayer, setActiveLayer] = useState<'heatmap' | 'satellite'>('heatmap');
+    const [showFires, setShowFires] = useState(false);
+
+    // Bbox for FIRMS data - debounced
+    const debouncedViewState = useDebounce(viewState, 1000);
 
     // Real-time subscription
     useAQISubscription();
@@ -99,6 +106,63 @@ export function CityHeatMap() {
         },
         staleTime: 60000,
     });
+
+    const { data: fireData } = useQuery({
+        queryKey: ['firms-data', debouncedViewState.longitude, debouncedViewState.latitude, debouncedViewState.zoom],
+        queryFn: async () => {
+            if (!showFires) return null;
+            // Simple bbox derivation from viewState
+            const latDelta = 2 / Math.pow(2, debouncedViewState.zoom - 8);
+            const lonDelta = latDelta * 1.5;
+            const minLon = debouncedViewState.longitude - lonDelta;
+            const minLat = debouncedViewState.latitude - latDelta;
+            const maxLon = debouncedViewState.longitude + lonDelta;
+            const maxLat = debouncedViewState.latitude + latDelta;
+
+            const bbox = `${minLon.toFixed(4)},${minLat.toFixed(4)},${maxLon.toFixed(4)},${maxLat.toFixed(4)}`;
+            const res = await fetch(`/api/firms?bbox=${bbox}&days=1`);
+            if (!res.ok) return null;
+            return res.json();
+        },
+        enabled: showFires,
+        staleTime: 60000
+    });
+
+    const fireGeoJSON = useMemo<GeoJSON.FeatureCollection | null>(() => {
+        if (!fireData?.hotspots) return null;
+        return {
+            type: 'FeatureCollection',
+            features: fireData.hotspots.map((h: any) => ({
+                type: 'Feature',
+                geometry: { type: 'Point', coordinates: [h.longitude, h.latitude] },
+                properties: { ...h }
+            }))
+        };
+    }, [fireData]);
+
+    const fireLayer = useMemo(() => ({
+        id: 'firms-fires',
+        type: 'circle',
+        paint: {
+            'circle-radius': [
+                'interpolate', ['linear'], ['get', 'frp'],
+                0, 4,
+                50, 7,
+                200, 12,
+                500, 18
+            ],
+            'circle-color': [
+                'match', ['get', 'confidence'],
+                'high', '#FF2200',
+                'nominal', '#FF6600',
+                'low', '#FFAA00',
+                '#FF6600'
+            ],
+            'circle-opacity': 0.85,
+            'circle-stroke-width': 1.5,
+            'circle-stroke-color': '#FFFFFF'
+        }
+    }), []);
 
     const heatmapLayer = useMemo(() => ({
         id: 'aqi-heatmap',
@@ -186,7 +250,7 @@ export function CityHeatMap() {
                 </CardTitle>
 
                 {/* Layer Controls */}
-                <div className="flex bg-[#0A1628] rounded-md border border-[#1e2a3b] p-1 shadow-inner">
+                <div className="flex bg-[#0A1628] rounded-md border border-[#1e2a3b] p-1 shadow-inner gap-1">
                     <button
                         onClick={() => setActiveLayer('heatmap')}
                         className={`px-3 py-1 text-xs font-semibold rounded ${activeLayer === 'heatmap' ? 'bg-[#00D4FF] text-black' : 'text-gray-400 hover:text-white'}`}
@@ -198,6 +262,14 @@ export function CityHeatMap() {
                         className={`px-3 py-1 text-xs font-semibold rounded ${activeLayer === 'satellite' ? 'bg-[#00D4FF] text-black' : 'text-gray-400 hover:text-white'}`}
                     >
                         Satellite
+                    </button>
+                    <div className="w-[1px] bg-[#1e2a3b] mx-1" />
+                    <button
+                        onClick={() => setShowFires(!showFires)}
+                        className={`px-3 py-1 text-xs font-semibold rounded flex items-center ${showFires ? 'bg-orange-500 text-white shadow-[0_0_10px_rgba(249,115,22,0.4)]' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        <Flame className={`w-3 h-3 mr-1 ${showFires ? 'animate-pulse' : ''}`} />
+                        Fire Hotspots
                     </button>
                 </div>
             </CardHeader>
@@ -225,14 +297,48 @@ export function CityHeatMap() {
                         </Source>
                     )}
 
+                    {fireGeoJSON && showFires && (
+                        <Source type="geojson" data={fireGeoJSON}>
+                            <Layer {...(fireLayer as any)} />
+                        </Source>
+                    )}
+
                     {/* Sensor Markers */}
                     {markers}
                 </Map>
             </div>
 
-            <div className="absolute bottom-6 left-6 z-10 p-3 bg-[#0A1628]/90 backdrop-blur-md border border-[#1e2a3b] rounded-xl shadow-xl">
-                <p className="text-xs text-gray-400 font-semibold mb-2 uppercase tracking-wider">AQI Density</p>
-                <AQIColorScale />
+            <div className="absolute bottom-6 left-6 z-10 flex flex-col gap-3">
+                {showFires && fireData && (
+                    <div className="p-3 bg-[#0A1628]/90 backdrop-blur-md border border-[#1e2a3b] rounded-xl shadow-xl">
+                        <p className="text-[10px] text-orange-500 font-bold mb-2 uppercase tracking-widest flex items-center">
+                            <Flame className="w-3 h-3 mr-1" /> Fire Hotspots (NASA FIRMS)
+                        </p>
+                        <div className="space-y-1.5">
+                            <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-[#FF2200]" />
+                                <span className="text-[9px] text-gray-300">High Confidence</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-[#FF6600]" />
+                                <span className="text-[9px] text-gray-300">Nominal</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-[#FFAA00]" />
+                                <span className="text-[9px] text-gray-300">Low</span>
+                            </div>
+                            <p className="text-[8px] text-gray-500 mt-2 font-medium">
+                                Circle size = Fire intensity (FRP)<br />
+                                Updated: {fireData.queriedAt ? formatDistanceToNow(new Date(fireData.queriedAt)) : 'recent'} ago
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                <div className="p-3 bg-[#0A1628]/90 backdrop-blur-md border border-[#1e2a3b] rounded-xl shadow-xl">
+                    <p className="text-[10px] text-gray-400 font-semibold mb-2 uppercase tracking-wider">AQI Density</p>
+                    <AQIColorScale />
+                </div>
             </div>
         </Card>
     );

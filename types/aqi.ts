@@ -1,3 +1,5 @@
+import { FireRiskAssessment } from "@/lib/api-clients/firms";
+
 export interface PollutantValues {
     pm25?: number; // µg/m³
     pm10?: number; // µg/m³
@@ -14,6 +16,7 @@ export interface AQReading {
     pollutants: PollutantValues;
     source: DataSource;
     timestamp: string; // ISO String
+    fireRiskAssessment?: FireRiskAssessment;
 }
 
 export interface SatelliteReading {

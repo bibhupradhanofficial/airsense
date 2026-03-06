@@ -4,6 +4,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { retrieveRelevantDocs } from '@/lib/rag/retrieval';
 import { Database } from '@/types/database';
+import { FireRiskAssessment } from '@/lib/api-clients/firms';
 
 const anthropic = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -30,7 +31,21 @@ const MOCK_LLM_RESPONSE = {
 
 export async function POST(request: Request) {
     try {
-        const { location_id, locationName, anomalyData, detectedSources, weatherData } = await request.json();
+        const {
+            location_id,
+            locationName,
+            anomalyData,
+            detectedSources,
+            weatherData,
+            fireRiskAssessment // ← NEW optional field
+        }: {
+            location_id: string;
+            locationName: string;
+            anomalyData: any;
+            detectedSources: any[];
+            weatherData: any;
+            fireRiskAssessment?: FireRiskAssessment;
+        } = await request.json();
 
         if (!location_id || !locationName || !anomalyData) {
             return NextResponse.json(
@@ -95,7 +110,17 @@ export async function POST(request: Request) {
 
         const ragQuery = `${anomalyData.summary || ''} ${primarySource}`;
 
-        const retrievedDocs = retrieveRelevantDocs(ragQuery, ragContextType, 4);
+        // 2a. Update RAG retrieval for fire-specific policies
+        const tags = [];
+        if (detectedSources?.some((s: any) => s.sourceType === 'biomass_burning') && fireRiskAssessment?.hasUpwindFire) {
+            tags.push('fire_satellite_confirmed');
+        }
+
+        const retrievedDocs = retrieveRelevantDocs(
+            ragQuery + (tags.length > 0 ? ` ${tags.join(' ')}` : ''),
+            ragContextType,
+            4
+        );
         const knowledgeContext = retrievedDocs.map((doc, idx) =>
             `${idx + 1}. [${doc.category}] ${doc.title}: ${doc.content}`
         ).join('\n\n');
@@ -116,6 +141,27 @@ METEOROLOGICAL CONDITIONS:
 - Humidity: ${weatherData?.humidity || 'Unknown'}%
 - Dispersion Factor: ${weatherData?.dispersion_factor || '1.0'}/1.0 (1.0 = ideal dispersion)
 
+${fireRiskAssessment && fireRiskAssessment.hasUpwindFire
+                ? `
+SATELLITE FIRE INTELLIGENCE (NASA FIRMS — VIIRS/MODIS):
+- Fire Risk Level: ${fireRiskAssessment.riskLevel.toUpperCase()}
+- Smoke Impact Score: ${fireRiskAssessment.smokeImpactScore.toFixed(1)}/10
+- Active Upwind Fires: ${fireRiskAssessment.upwindFireCount}
+- Nearest Fire: ${fireRiskAssessment.nearestFireDistanceKm?.toFixed(0)}km away
+- Nearest Fire Intensity: ${fireRiskAssessment.nearestFireFRP?.toFixed(0)}MW (Fire Radiative Power)
+- Summary: ${fireRiskAssessment.riskSummary}
+- Data Source: NASA FIRMS VIIRS 375m NRT — confirmed active fire detections
+`
+                : fireRiskAssessment
+                    ? `
+SATELLITE FIRE INTELLIGENCE (NASA FIRMS):
+- No active fires detected within 500km radius.
+- Biomass burning source unlikely based on satellite data.
+`
+                    : `
+SATELLITE FIRE INTELLIGENCE: NASA FIRMS data not available for this query.
+`}
+
 RELEVANT POLICY KNOWLEDGE BASE:
 ${knowledgeContext}
 
@@ -128,8 +174,13 @@ Generate a structured JSON response with:
   "mediumTermActions": [array of 2-3 policy recommendations with timeline > 48h],
   "citizenAdvisory": "plain-language advice for general public (max 60 words)",
   "monitoringNote": "what to watch for in next 24 hours",
-  "regulatoryReferences": [relevant laws/norms cited]
+  "regulatoryReferences": [relevant laws/norms cited],
+  "fireCoordinates": [
+    { "lat": number, "lon": number, "frpMW": number, "distanceKm": number }
+  ] | null
 }
+
+Instruction for fireCoordinates: "If satellite fire data is provided and hasUpwindFire is true, populate fireCoordinates with the top 3 fires by FRP from the FIRMS data. These will be plotted on the admin dashboard map. If no fire data is available, set to null."
 
 Respond ONLY with the JSON object. No preamble or explanation outside the JSON.`;
 
@@ -187,7 +238,8 @@ Respond ONLY with the JSON object. No preamble or explanation outside the JSON.`
                 anomaly_summary: anomalyData.summary || recommendationPayload.headline,
                 recommendation_text: JSON.stringify(recommendationPayload), // Storing the full JSON structure in text field
                 status: 'pending',
-                generated_by: 'ai_engine'
+                generated_by: 'ai_engine',
+                fire_risk_data: fireRiskAssessment // Persist FIRMS data
             })
             .select()
             .single();

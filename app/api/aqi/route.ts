@@ -93,11 +93,30 @@ export async function GET(request: NextRequest) {
         // Set Cache
         aqiCache.set(cacheKey, { data: reading, timestamp: Date.now() });
 
+        // Add FIRMS integration logic
+        // If source is satellite OR if PM2.5 is high, fetch fire risk assessment
+        if (usedSource === 'satellite' || (reading.pollutants.pm25 && reading.pollutants.pm25 > 35)) {
+            try {
+                const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+                const firmsRes = await fetch(
+                    `${appUrl}/api/firms?lat=${lat}&lon=${lon}&radius=300&days=2`
+                );
+                if (firmsRes.ok) {
+                    const firmsData = await firmsRes.json();
+                    if (firmsData?.riskAssessment) {
+                        reading.fireRiskAssessment = firmsData.riskAssessment;
+                    }
+                }
+            } catch (error) {
+                console.warn("Failed to fetch FIRMS data for integration", error);
+            }
+        }
+
         // Persist to Supabase asynchronously
         const supabase = await createClient();
         (async () => {
             try {
-                await supabase.from("aqi_readings").insert({
+                const insertData: any = {
                     aqi_value: reading.aqi,
                     pm25: reading.pollutants.pm25,
                     pm10: reading.pollutants.pm10,
@@ -108,7 +127,14 @@ export async function GET(request: NextRequest) {
                     source: (usedSource === 'openaq' ? 'iot' : usedSource) as Database['public']['Enums']['source_type'],
                     recorded_at: reading.timestamp,
                     created_at: reading.timestamp
-                });
+                };
+
+                // Add fire risk data if available
+                if (reading.fireRiskAssessment) {
+                    insertData.fire_risk_data = reading.fireRiskAssessment;
+                }
+
+                await supabase.from("aqi_readings").insert(insertData);
             } catch (e) {
                 // Ignore DB errors in standard flow, likely just structure differences or missing tables
                 console.warn("Async Supabase save failed for AQI reading", e);

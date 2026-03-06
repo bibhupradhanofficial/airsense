@@ -8,11 +8,13 @@ import { useAdminContext } from '@/lib/admin/useAdminContext';
 import { useAdminStore } from '@/store/adminStore';
 import { applyCityFilter } from '@/lib/admin/queryHelpers';
 import { ShieldAlert, CheckCircle2, AlertTriangle, FileText, ArrowRight } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { PolicyCard } from '@/components/admin/PolicyCard';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 export default function PolicyHubPage() {
     const supabase = createClient();
+    const queryClient = useQueryClient();
     const { adminContext } = useAdminContext();
     const { selectedCityId } = useAdminStore();
 
@@ -23,6 +25,7 @@ export default function PolicyHubPage() {
             let query = supabase
                 .from('policy_recommendations')
                 .select('*, locations!inner(name, city)')
+                .eq('status', 'pending') // Only show pending in hub
                 .order('created_at', { ascending: false });
 
             query = applyCityFilter(query, adminContext, selectedCityId);
@@ -31,6 +34,19 @@ export default function PolicyHubPage() {
             return data as any[];
         },
         enabled: !!adminContext
+    });
+
+    const updateStatus = useMutation({
+        mutationFn: async ({ id, status }: { id: string, status: 'actioned' | 'dismissed' }) => {
+            const { error } = await supabase
+                .from('policy_recommendations')
+                .update({ status: status as any })
+                .eq('id', id);
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['policy-recommendations'] });
+        }
     });
 
     return (
@@ -57,7 +73,7 @@ export default function PolicyHubPage() {
                         <div>
                             <p className="text-[10px] text-gray-500 uppercase font-bold">Pending</p>
                             <p className="text-lg font-bold text-white leading-none">
-                                {recommendations?.filter(r => r.status === 'pending').length || 0}
+                                {recommendations?.length || 0}
                             </p>
                         </div>
                     </Card>
@@ -76,80 +92,18 @@ export default function PolicyHubPage() {
                         <p className="text-gray-500 text-sm">System is currently observing no critical air quality events.</p>
                     </div>
                 ) : (
-                    recommendations?.map((rec) => {
-                        const content = typeof rec.recommendation_text === 'string'
-                            ? JSON.parse(rec.recommendation_text)
-                            : rec.recommendation_text;
-
-                        return (
-                            <Card key={rec.id} className="bg-[#132238] border-[#1e2a3b] overflow-hidden group hover:border-[#00D4FF]/30 transition-all">
-                                <div className="flex flex-col md:flex-row">
-                                    <div className={cn(
-                                        "w-2 shrink-0",
-                                        rec.severity === 'critical' ? 'bg-red-500' :
-                                            rec.severity === 'high' ? 'bg-orange-500' : 'bg-blue-500'
-                                    )} />
-                                    <div className="p-6 flex-1">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <Badge variant="outline" className="border-[#1e2a3b] text-gray-400 font-mono text-[10px]">
-                                                        {rec.id.slice(0, 8).toUpperCase()}
-                                                    </Badge>
-                                                    <Badge className={cn(
-                                                        "font-bold text-[10px]",
-                                                        rec.severity === 'critical' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'
-                                                    )}>
-                                                        {rec.severity.toUpperCase()}
-                                                    </Badge>
-                                                </div>
-                                                <h3 className="text-xl font-bold text-white group-hover:text-[#00D4FF] transition-colors">
-                                                    {content.headline || 'Policy Recommendation'}
-                                                </h3>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-xs text-gray-500 font-medium">LOCATION</p>
-                                                <p className="text-sm text-white font-bold">{rec.locations.name}, {rec.locations.city}</p>
-                                            </div>
-                                        </div>
-
-                                        <p className="text-gray-400 text-sm mb-6 leading-relaxed max-w-3xl">
-                                            {rec.anomaly_summary}
-                                        </p>
-
-                                        <div className="bg-[#0A1628] rounded-2xl p-4 border border-[#1e2a3b]">
-                                            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 flex items-center">
-                                                <ArrowRight className="h-3 w-3 mr-1 text-[#00D4FF]" />
-                                                Proposed Interventions
-                                            </p>
-                                            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                {content.immediateActions?.map((action: string, idx: number) => (
-                                                    <li key={idx} className="flex items-start text-sm text-gray-300">
-                                                        <div className="h-1.5 w-1.5 rounded-full bg-[#00D4FF] mt-1.5 mr-2 shrink-0" />
-                                                        {action}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    </div>
-                                    <div className="p-6 bg-[#0A1628]/50 border-l border-[#1e2a3b] flex flex-col justify-center items-center gap-3 w-full md:w-48">
-                                        <Button className="w-full bg-[#00D4FF] hover:bg-[#00b0d6] text-black font-bold h-11">
-                                            Approve
-                                        </Button>
-                                        <Button variant="outline" className="w-full border-[#1e2a3b] text-gray-400 hover:text-white h-11">
-                                            Dismiss
-                                        </Button>
-                                    </div>
-                                </div>
-                            </Card>
-                        );
-                    })
+                    recommendations?.map((rec) => (
+                        <PolicyCard
+                            key={rec.id}
+                            recommendation={rec}
+                            onApprove={(id) => updateStatus.mutate({ id, status: 'actioned' })}
+                            onDismiss={(id) => updateStatus.mutate({ id, status: 'dismissed' })}
+                            isProcessing={updateStatus.isPending}
+                        />
+                    ))
                 )}
             </div>
         </div>
     );
 }
 
-function cn(...classes: any[]) {
-    return classes.filter(Boolean).join(' ');
-}

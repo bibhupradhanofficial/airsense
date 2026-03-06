@@ -22,12 +22,15 @@ import {
     MinusCircle,
     PlusCircle,
     Wind,
-    Activity
+    Activity,
+    Flame,
+    ChevronRight,
 } from 'lucide-react';
 import { getAQIDisplay, getAQICategory } from '@/lib/aqi-utils';
 import { useAQISubscription } from '@/lib/realtime/useAQISubscription';
 import { useAQIStore } from '@/store/aqiStore';
 import { createClient } from '@/lib/supabase/client';
+import { FireRiskAssessment, degreesToCardinal } from '@/lib/api-clients/firms';
 
 const POPULAR_CITIES = [
     'Delhi', 'Mumbai', 'Bangalore', 'Hyderabad', 'Chennai', 'Kolkata', 'Bhubaneswar', 'Pune'
@@ -51,6 +54,7 @@ export default function SearchPage() {
     const [recentSearches, setRecentSearches] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [fireRisk, setFireRisk] = useState<FireRiskAssessment | null>(null);
 
     // Initialize real-time subscription for selected location
     const { isConnected } = useAQISubscription(selectedLocation?.id ?? undefined);
@@ -134,6 +138,18 @@ export default function SearchPage() {
             setCompareLocation(data);
         } else {
             setSelectedLocation(data);
+
+            // Fetch fire risk for main location
+            try {
+                const fireResp = await fetch(`/api/firms?lat=${data.lat}&lon=${data.lng}&radius=300&days=2`);
+                if (fireResp.ok) {
+                    const fireData = await fireResp.json();
+                    setFireRisk(fireData);
+                }
+            } catch (e) {
+                console.error("Failed to fetch fire data during search", e);
+            }
+
             // Update recent searches only for main location
             const updated = [name, ...recentSearches.filter(s => s !== name)].slice(0, 5);
             setRecentSearches(updated);
@@ -162,6 +178,17 @@ export default function SearchPage() {
 
         const data = await fetchDataForLocation(selectedLocation.name);
         setSelectedLocation(data);
+
+        // Refresh fire data
+        try {
+            const fireResp = await fetch(`/api/firms?lat=${data.lat}&lon=${data.lng}&radius=300&days=2`);
+            if (fireResp.ok) {
+                const fireData = await fireResp.json();
+                setFireRisk(fireData);
+            }
+        } catch (e) {
+            console.error("Failed to refresh fire data", e);
+        }
 
         setIsRefreshing(false);
     };
@@ -363,6 +390,52 @@ export default function SearchPage() {
                                     stations={nearbyStations}
                                     onSelect={(s) => handleSearch(s.name)}
                                 />
+
+                                {/* Fire Activity Card */}
+                                <Card className="p-6 bg-white border border-zinc-100 shadow-sm space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-bold text-zinc-900 flex items-center gap-2">
+                                            <Flame className="h-4 w-4 text-orange-500" />
+                                            Nearby Fire Activity
+                                        </h3>
+                                        {fireRisk && fireRisk.totalFiresInRegion > 0 && (
+                                            <Badge className="bg-orange-100 text-orange-700 border-none font-bold">
+                                                {fireRisk.totalFiresInRegion} Sensors
+                                            </Badge>
+                                        )}
+                                    </div>
+
+                                    {!fireRisk || fireRisk.totalFiresInRegion === 0 ? (
+                                        <p className="text-zinc-500 text-sm py-2">
+                                            No active fires detected within 300km. <span className="text-emerald-500">✓</span>
+                                        </p>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <div className="space-y-3">
+                                                {fireRisk.hotspots.slice(0, 4).map((fire, idx) => (
+                                                    <div key={idx} className="flex items-center justify-between text-xs pb-3 border-b border-zinc-50 last:border-0 last:pb-0">
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <span className="font-bold text-zinc-800">
+                                                                {Math.round(fire.distanceKm || 0)}km • {degreesToCardinal(fire.windBearing || 0)}
+                                                            </span>
+                                                            <span className="text-zinc-400 text-[10px] uppercase font-bold tracking-tight">Upwind Hotspot</span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="font-black text-orange-600">{fire.frp} MW</div>
+                                                            <div className="text-[10px] text-zinc-400">Intensity</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="pt-2">
+                                                <p className="text-[10px] text-zinc-400 italic">
+                                                    Updated every 3–12 hours via NASA VIIRS satellite
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </Card>
+
                                 <Card className="p-6 bg-teal-900 text-white border-none shadow-xl overflow-hidden relative">
                                     <div className="relative z-10 space-y-4">
                                         <h3 className="font-black text-xl leading-tight">Join the Network</h3>

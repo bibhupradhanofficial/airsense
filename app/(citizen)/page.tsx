@@ -11,12 +11,15 @@ import { LocationSearch } from '@/components/citizen/LocationSearch';
 import { PollutantCard } from '@/components/citizen/PollutantCard';
 import { ForecastRow } from '@/components/citizen/ForecastRow';
 import { HealthAdvisory } from '@/components/citizen/HealthAdvisory';
+import { FireRiskAssessment, degreesToCardinal } from '@/lib/api-clients/firms';
+import { Flame } from 'lucide-react';
 
 export default function CitizenHomePage() {
     const [locationStatus, setLocationStatus] = useState<GeolocationStatus>('idle');
     const [loadingStage, setLoadingStage] = useState<LoadingStage>('locating');
     const [userLocation, setUserLocation] = useState<GeolocationResult | null>(null);
     const [aqiData, setAQIData] = useState<AQReading | null>(null);
+    const [fireRisk, setFireRisk] = useState<FireRiskAssessment | null>(null);
     const [showPermissionModal, setShowPermissionModal] = useState(false);
     const [showGPSInstructions, setShowGPSInstructions] = useState(false);
 
@@ -59,6 +62,13 @@ export default function CitizenHomePage() {
 
             const data = await response.json();
             setAQIData(data);
+
+            // Fetch fire risk
+            const fireResponse = await fetch(`/api/firms?lat=${location.lat}&lon=${location.lon}&radius=300&days=2`);
+            if (fireResponse.ok) {
+                const fireData = await fireResponse.json();
+                setFireRisk(fireData);
+            }
         } catch (error) {
             console.error("Location or AQI resolution failed", error);
             setLocationStatus('error');
@@ -242,6 +252,50 @@ export default function CitizenHomePage() {
                         </div>
                     </section>
 
+                    {fireRisk && ['moderate', 'high', 'critical'].includes(fireRisk.riskLevel) && (
+                        <section className="bg-[#FEF3C7] border-l-4 border-[#F59E0B] p-6 rounded-r-2xl shadow-sm animate-in fade-in slide-in-from-left-4 duration-500">
+                            <div className="flex items-start gap-4">
+                                <div className="h-10 w-10 rounded-full bg-[#F59E0B]/20 flex items-center justify-center shrink-0">
+                                    <Flame className="text-[#F59E0B]" size={20} />
+                                </div>
+                                <div className="space-y-3 flex-1 text-left">
+                                    <div className="flex flex-col gap-1">
+                                        <h3 className="font-bold text-[#92400E] text-lg flex items-center gap-2">
+                                            🔥 Wildfire/Agricultural Fire Activity Detected Nearby
+                                        </h3>
+                                        <p className="text-[#B45309] font-medium leading-relaxed">
+                                            &quot;{fireRisk.riskSummary}&quot;
+                                        </p>
+                                        <p className="text-[#D97706] text-sm italic">
+                                            &quot;{fireRisk.upwindFireCount} active fire(s) detected {Math.round(fireRisk.nearestFireDistanceKm || 0)}km from your location via NASA FIRMS satellite.&quot;
+                                        </p>
+                                        <p className="text-[#B45309] text-sm">
+                                            Smoke from these fires may be contributing to current air quality.
+                                        </p>
+                                    </div>
+
+                                    <details className="group">
+                                        <summary className="text-[#92400E] text-xs font-bold cursor-pointer hover:underline flex items-center gap-1 list-none outline-none">
+                                            <ChevronRight size={14} className="group-open:rotate-90 transition-transform" />
+                                            Show Detailed Satellite Data
+                                        </summary>
+                                        <div className="mt-4 space-y-3 pl-4 border-l border-[#F59E0B]/30">
+                                            {fireRisk.hotspots.slice(0, 3).map((h, i) => (
+                                                <div key={i} className="flex justify-between text-xs text-[#92400E]">
+                                                    <span className="font-medium">{Math.round(h.distanceKm || 0)}km away • {degreesToCardinal(h.windBearing || 0)}</span>
+                                                    <span className="font-bold">{h.frp} MW Intensity</span>
+                                                </div>
+                                            ))}
+                                            <p className="text-[10px] text-[#D97706] pt-2 border-t border-[#F59E0B]/10">
+                                                Data credit: Fire data from NASA FIRMS VIIRS (375m resolution, NRT)
+                                            </p>
+                                        </div>
+                                    </details>
+                                </div>
+                            </div>
+                        </section>
+                    )}
+
                     <section className="space-y-6">
                         <div className="space-y-1">
                             <h2 className="text-2xl font-bold tracking-tight text-zinc-900">Today&apos;s Forecast</h2>
@@ -255,7 +309,12 @@ export default function CitizenHomePage() {
                             <h2 className="text-2xl font-bold tracking-tight text-zinc-900">Health Advisory</h2>
                             <p className="text-zinc-500">Personalized recommendations based on current conditions</p>
                         </div>
-                        <HealthAdvisory aqi={aqiData.aqi} source={aqiData.source} />
+                        <HealthAdvisory
+                            aqi={aqiData.aqi}
+                            source={aqiData.source}
+                            fireRisk={fireRisk || undefined}
+                            detectedSource={aqiData.source === 'satellite' ? 'biomass_burning' : undefined}
+                        />
                     </section>
                 </div>
             )}

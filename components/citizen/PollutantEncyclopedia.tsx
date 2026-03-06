@@ -69,6 +69,15 @@ const POLLUTANTS: PollutantInfo[] = [
         effects: ['Dizziness', 'Confusion', 'Reduced oxygen delivery'],
         whoLimit: '4 mg/m³ (24h mean)',
         description: 'A colorless, odorless gas that blocks oxygen transport in the body.'
+    },
+    {
+        name: 'Smoke',
+        fullName: 'Wood Smoke (PM2.5)',
+        icon: <Flame className="h-5 w-5" />,
+        sources: ['Wildfires', 'Crop burning', 'Forest clearing'],
+        effects: ['Severe inflammation', 'Systemic toxicity', 'Blood clots'],
+        whoLimit: 'Satellite Detected',
+        description: 'Specific particulate matter from biomass burning. AirSense uses NASA FIRMS satellite data to detect these plumes in real-time.'
     }
 ];
 

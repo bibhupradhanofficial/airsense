@@ -134,4 +134,18 @@ export const knowledgeBase: KnowledgeDocument[] = [
         content: 'During "Very Unhealthy" or worse AQI days, infants, the elderly, and those with Asthma or COPD must remain indoors. If outdoor travel is unavoidable, NIOSH-approved N95 or N99 particulate respirators must be worn. Standard surgical or cloth masks offer virtually zero protection against PM2.5.',
         tags: ['health', 'advisory', 'pm25', 'masks', 'n95', 'asthma', 'copd', 'elderly', 'children', 'indoors'],
     },
+    {
+        id: 'mit-bio-003',
+        category: 'MITIGATION_BIOMASS',
+        title: 'Response Protocol for Satellite-Confirmed Fire Events',
+        content: 'When NASA FIRMS satellite data confirms active upwind fires: 1. IMMEDIATE (0–6 hours): Issue health advisory for affected wards. Activate GRAP Stage II/III protocols if AQI > 200. Alert district administration with precise fire coordinates for ground verification. 2. SHORT-TERM (6–48 hours): Coordinate with State Pollution Control Board to issue notices under Section 19 of the Air Act 1981 to responsible parties. If fire is on agricultural land, engage with district agriculture officer for stubble management alternatives (bio-decomposer, Happy Seeder). 3. COMMUNICATION: Share fire location data (lat/lon from FIRMS) with State Fire Services and Revenue Department for ground action. 4. MONITORING: Increase AQI monitoring frequency to every 5 minutes. Track smoke plume movement using wind forecast data.',
+        tags: ['biomass_burning', 'fire_satellite_confirmed', 'emergency'],
+    },
+    {
+        id: 'mit-bio-004',
+        category: 'MITIGATION_BIOMASS',
+        title: 'Crop Residue Burning — Regulatory Framework India',
+        content: 'Legal framework: Burning of agricultural residue is prohibited under NGT Order (2015), amended Air Quality Management Commission (AQMC) directions for NCR and adjoining areas. Penalties: Rs. 2,500 (< 2 acres), Rs. 5,000 (2–5 acres), Rs. 15,000 (> 5 acres). Alternatives: Bio-decomposer spray (subsidized by state govts), Paddy Straw Management Scheme, in-situ incorporation via rotavator. Contact: AQMC helpline 14422 for NCR region.',
+        tags: ['biomass_burning', 'crop_burning', 'north_india', 'seasonal'],
+    },
 ];

@@ -8,7 +8,8 @@ import { AQIScaleExplainer } from '@/components/citizen/AQIScaleExplainer';
 import { MaskGuide } from '@/components/citizen/MaskGuide';
 import { IAQTips } from '@/components/citizen/IAQTips';
 import { Badge } from '@/components/ui/badge';
-import { Heart, Activity, ShieldCheck, BookOpen } from 'lucide-react';
+import { Heart, Activity, ShieldCheck, BookOpen, HelpCircle } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 export default function HealthGuidePage() {
     return (
@@ -74,6 +75,38 @@ export default function HealthGuidePage() {
                     <p className="text-zinc-500 max-w-xl mx-auto">Indoor air can be 5x more polluted than outdoor air. Use these strategies to create a safe sanctuary.</p>
                 </div>
                 <IAQTips />
+            </section>
+
+            {/* FAQ Section */}
+            <section className="space-y-12 py-12">
+                <div className="flex flex-col items-center gap-4 text-center">
+                    <div className="h-12 w-12 rounded-2xl bg-zinc-100 text-zinc-900 flex items-center justify-center">
+                        <HelpCircle className="h-6 w-6" />
+                    </div>
+                    <h2 className="text-3xl font-black text-zinc-900">Science & Technology</h2>
+                    <p className="text-zinc-500 max-w-xl">How AirSense uses next-generation technology to safeguard your health.</p>
+                </div>
+
+                <div className="max-w-3xl mx-auto">
+                    <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value="item-1" className="border-zinc-100">
+                            <AccordionTrigger className="text-left font-bold text-lg hover:text-teal-600 transition-colors">
+                                How does AirSense detect wildfires and crop burning?
+                            </AccordionTrigger>
+                            <AccordionContent className="text-zinc-600 leading-relaxed text-base pt-2">
+                                We integrate directly with NASA&apos;s MODIS and VIIRS satellite instruments. Every 3 hours, our system scans for thermal hotspots within a 300km radius of your location. If upwind fires are detected, we automatically flag the predominant pollution source as &quot;Biomass Burning&quot; and escalate health alerts. This allows you to prepare for smoke plumes before they arrive.
+                            </AccordionContent>
+                        </AccordionItem>
+                        <AccordionItem value="item-2" className="border-zinc-100">
+                            <AccordionTrigger className="text-left font-bold text-lg hover:text-teal-600 transition-colors">
+                                What is the difference between sensor AQI and satellite AQI?
+                            </AccordionTrigger>
+                            <AccordionContent className="text-zinc-600 leading-relaxed text-base pt-2">
+                                Sensor AQI comes from physical hardware on the ground (like AirSense nodes) measuring PM2.5 in real-time. Satellite AQI is a modeled prediction that covers areas where physical sensors aren&apos;t present. AirSense combines both to provide the most accurate possible data for your exact GPS coordinates.
+                            </AccordionContent>
+                        </AccordionItem>
+                    </Accordion>
+                </div>
             </section>
 
             {/* Final CTA */}

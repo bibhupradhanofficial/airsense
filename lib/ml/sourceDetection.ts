@@ -1,10 +1,13 @@
+import { FireRiskAssessment } from "@/lib/api-clients/firms";
+
 export type TimeOfDay = 'morning_rush' | 'daytime' | 'evening_rush' | 'night';
 
 export interface PollutionSignature {
-  sourceType: 'TRAFFIC' | 'CONSTRUCTION_DUST' | 'BIOMASS_BURNING' | 'INDUSTRIAL';
-  confidence: number; // 0 to 1
+  sourceType: 'traffic' | 'construction' | 'biomass_burning' | 'industrial' | 'unknown';
+  confidence: number; // 0 to 1 (API usually returns 0-100 internally, we normalize or keep consistent)
   indicators: string[];
   timePattern: TimeOfDay;
+  satelliteConfirmed?: boolean;   // true if FIRMS data directly confirms the source
 }
 
 export interface AQReading {
@@ -52,7 +55,8 @@ function isBurningSeason(date: Date): boolean {
 export function classifyPollutionSource(
   reading: AQReading,
   weather: WeatherData,
-  historicalReadings: AQReading[]
+  historicalReadings: AQReading[],
+  fireRisk?: FireRiskAssessment
 ): PollutionSignature[] {
   const signatures: PollutionSignature[] = [];
   const date = new Date(reading.timestamp);
@@ -60,10 +64,10 @@ export function classifyPollutionSource(
   const weekday = isWeekday(date);
 
   // 1. TRAFFIC signature
-  if (reading.no2 > 100 && reading.co > 0) { // Assuming 'elevated' CO > 0 (will tune base baseline later)
+  if (reading.no2 > 100 && reading.co > 0) {
     if (timePattern === 'morning_rush' || timePattern === 'evening_rush') {
       signatures.push({
-        sourceType: 'TRAFFIC',
+        sourceType: 'traffic',
         confidence: weekday ? 0.9 : 0.6,
         indicators: ['High NO2', 'Elevated CO', 'Rush hour timing'],
         timePattern,
@@ -77,7 +81,7 @@ export function classifyPollutionSource(
     if (timePattern === 'daytime' || timePattern === 'morning_rush' || timePattern === 'evening_rush') {
       if (weather.windSpeed < 20) {
         signatures.push({
-          sourceType: 'CONSTRUCTION_DUST',
+          sourceType: 'construction',
           confidence: 0.85,
           indicators: ['High PM10', 'Low PM2.5/PM10 ratio (coarse particles)', 'Daytime operation', 'Low wind speed'],
           timePattern,
@@ -87,22 +91,17 @@ export function classifyPollutionSource(
   }
 
   // 3. BIOMASS BURNING signature
-  // 'Elevated PM2.5' heuristics (e.g. > 60 for 24h average, > ~100 for hourly spike)
-  if (reading.pm25 > 100 && pmRatio > 0.7) {
-    if (isBurningSeason(date)) {
-      signatures.push({
-        sourceType: 'BIOMASS_BURNING',
-        confidence: 0.8,
-        indicators: ['High PM2.5', 'High PM2.5/PM10 ratio (fine particles)', 'Burning season (Oct-Jan)'],
-        timePattern,
-      });
-    }
+  const biomassSignature = detectBiomassBurning(reading, weather, fireRisk);
+  if (biomassSignature) {
+    // Convert 0-100 confidence to 0-1 for signature consistency
+    biomassSignature.confidence = biomassSignature.confidence / 100;
+    signatures.push(biomassSignature);
   }
 
   // 4. INDUSTRIAL signature
   if (reading.so2 > 50 || (reading.no2 > 100 && timePattern !== 'morning_rush' && timePattern !== 'evening_rush')) {
     signatures.push({
-      sourceType: 'INDUSTRIAL',
+      sourceType: 'industrial',
       confidence: 0.75,
       indicators: ['High SO2 or sustained high NO2 outside rush hours', 'Non-traffic temporal pattern'],
       timePattern,
@@ -111,6 +110,79 @@ export function classifyPollutionSource(
 
   // Sort by highest confidence first
   return signatures.sort((a, b) => b.confidence - a.confidence);
+}
+
+function detectBiomassBurning(
+  reading: AQReading,
+  weather: WeatherData,
+  fireRisk?: FireRiskAssessment
+): PollutionSignature | null {
+  const date = new Date(reading.timestamp);
+  const timePattern = getTimeOfDay(date);
+  let confidence = 0;
+  const indicators: string[] = [];
+
+  // TIER 1: Direct satellite fire confirmation (highest confidence boost)
+  if (fireRisk && fireRisk.hasUpwindFire) {
+    switch (fireRisk.riskLevel) {
+      case 'critical': confidence += 75; break;
+      case 'high': confidence += 60; break;
+      case 'moderate': confidence += 40; break;
+      case 'low': confidence += 20; break;
+    }
+    if (fireRisk.nearestFireDistanceKm) {
+      indicators.push(
+        `NASA FIRMS: ${fireRisk.upwindFireCount} active fire(s) detected ` +
+        `${Math.round(fireRisk.nearestFireDistanceKm)}km upwind ` +
+        `(FRP: ${fireRisk.nearestFireFRP?.toFixed(0)}MW)`
+      );
+    }
+  }
+
+  // TIER 2: Chemical fingerprint — fine particle dominance
+  if (reading.pm25 && reading.pm10 && reading.pm10 > 0) {
+    const fineRatio = reading.pm25 / reading.pm10;
+    if (fineRatio > 0.7) {
+      confidence += 20;
+      indicators.push(`Fine particle ratio: ${(fineRatio * 100).toFixed(0)}% (biomass signature)`);
+    } else if (fineRatio > 0.5) {
+      confidence += 10;
+      indicators.push(`Moderate fine particle ratio: ${(fineRatio * 100).toFixed(0)}%`);
+    }
+  }
+
+  // TIER 3: Seasonal context (Oct–Jan = crop burning season, North India)
+  const month = new Date().getMonth() + 1; // 1-12
+  const isBurningSeasonNorthIndia = month >= 10 || month <= 1;
+  if (isBurningSeasonNorthIndia) {
+    confidence += 15;
+    indicators.push('Active crop burning season (Oct–Jan)');
+  }
+
+  // TIER 4: Meteorological context
+  // Calm conditions (low wind) allow smoke to accumulate
+  if (weather.windSpeed < 10) {
+    confidence += 5;
+    indicators.push(`Low wind speed (${weather.windSpeed} km/h) — smoke accumulation conditions`);
+  }
+
+  // TIER 5: Negation logic — if NO fire detected by FIRMS, reduce confidence
+  if (fireRisk && !fireRisk.hasUpwindFire && fireRisk.totalFiresInRegion === 0) {
+    confidence -= 25; // Satellite shows no fires — likely not biomass burning
+    indicators.push('NASA FIRMS: No active fires detected in 500km radius');
+  }
+
+  confidence = Math.max(0, Math.min(100, confidence));
+
+  if (confidence < 10) return null;
+
+  return {
+    sourceType: 'biomass_burning',
+    confidence, // This will be divided by 100 in classifyPollutionSource
+    indicators,
+    timePattern,
+    satelliteConfirmed: fireRisk?.hasUpwindFire ?? false
+  };
 }
 
 /**
@@ -122,7 +194,7 @@ export function computeAnomalyScore(current: AQReading, history: AQReading[]): n
 
   const aqiValues = history.map((r) => r.aqi);
   const mean = aqiValues.reduce((sum, val) => sum + val, 0) / aqiValues.length;
-  
+
   const variance = aqiValues.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / aqiValues.length;
   const stdDev = Math.sqrt(variance) || 1; // Prevent div/0
 
@@ -131,7 +203,7 @@ export function computeAnomalyScore(current: AQReading, history: AQReading[]): n
   // Map Z-score to an anomaly scale of 0-10
   // e.g., z=0 -> 0, z=3 -> ~9. Threshold > 6 is roughly z > 2.0
   let score = zScore * 3;
-  
+
   if (score < 0) score = 0;
   if (score > 10) score = 10;
 

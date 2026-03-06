@@ -57,19 +57,27 @@ export async function POST(request: Request) {
 
         const currentReading = history[0]; // Assuming sorted descending
 
-        // 2. Run Heuristic ML Rules
-        const signatures = classifyPollutionSource(currentReading, weather, history);
+        // 2. Fetch FIRMS fire risk data
+        const firmsRes = await fetch(
+            `${process.env.NEXT_PUBLIC_APP_URL}/api/firms?lat=${lat}&lon=${lon}&radius=300&days=2`
+        ).catch(() => null);
+        const firmsData = firmsRes?.ok ? await firmsRes.json() : null;
+        const fireRisk = firmsData?.riskAssessment ?? undefined;
+
+        // 3. Run Heuristic ML Rules
+        const signatures = classifyPollutionSource(currentReading, weather, history, fireRisk);
         const anomalyScore = computeAnomalyScore(currentReading, history);
         const isSustained = detectSustainedAnomaly(history, 6); // e.g., > 150 AQI for 6 hours
 
-        // 3. Save to database (mocked for now)
+        // 4. Save to database (mocked for now)
         // const supabase = createClient();
         // if (signatures.length > 0) {
         //    await supabase.from('pollution_sources').insert({
         //       location_id,
         //       detected_source: signatures[0].sourceType,
         //       confidence: signatures[0].confidence,
-        //       anomaly_score: anomalyScore
+        //       anomaly_score: anomalyScore,
+        //       fire_risk_data: fireRisk // ← NEWly integrated FIRMS data
         //    });
         // }
 
@@ -77,6 +85,7 @@ export async function POST(request: Request) {
             location_id,
             current_aqi: currentReading.aqi,
             detected_sources: signatures,
+            fire_risk: fireRisk,
             anomaly_score: anomalyScore,
             sustained_anomaly: isSustained,
             trigger_policy_engine: anomalyScore > 6 || isSustained

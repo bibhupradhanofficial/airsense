@@ -64,6 +64,7 @@ export interface Database {
                     humidity: number | null
                     wind_speed: number | null
                     wind_direction: number | null
+                    fire_risk_data: Json | null
                     recorded_at: string
                     created_at: string | null
                 }
@@ -82,6 +83,7 @@ export interface Database {
                     humidity?: number | null
                     wind_speed?: number | null
                     wind_direction?: number | null
+                    fire_risk_data?: Json | null
                     recorded_at: string
                     created_at?: string | null
                 }
@@ -100,6 +102,7 @@ export interface Database {
                     humidity?: number | null
                     wind_speed?: number | null
                     wind_direction?: number | null
+                    fire_risk_data?: Json | null
                     recorded_at?: string
                     created_at?: string | null
                 }
@@ -118,6 +121,7 @@ export interface Database {
                     location_id: string | null
                     source_type: Database['public']['Enums']['pollution_source_type'] | null
                     confidence_score: number | null
+                    fire_risk_data: Json | null
                     detected_at: string
                     raw_features: Json | null
                 }
@@ -126,6 +130,7 @@ export interface Database {
                     location_id?: string | null
                     source_type?: Database['public']['Enums']['pollution_source_type'] | null
                     confidence_score?: number | null
+                    fire_risk_data?: Json | null
                     detected_at: string
                     raw_features?: Json | null
                 }
@@ -154,6 +159,7 @@ export interface Database {
                     severity: Database['public']['Enums']['severity_level'] | null
                     anomaly_summary: string | null
                     recommendation_text: string
+                    fire_risk_data: Json | null
                     status: Database['public']['Enums']['recommendation_status'] | null
                     generated_by: string | null
                     created_at: string | null
@@ -165,6 +171,7 @@ export interface Database {
                     severity?: Database['public']['Enums']['severity_level'] | null
                     anomaly_summary?: string | null
                     recommendation_text: string
+                    fire_risk_data?: Json | null
                     status?: Database['public']['Enums']['recommendation_status'] | null
                     generated_by?: string | null
                     created_at?: string | null
@@ -352,6 +359,7 @@ export interface Database {
                     records_processed: number | null
                     ran_at: string
                     error_message: string | null
+                    metadata: Json | null
                 }
                 Insert: {
                     id?: string
@@ -360,6 +368,7 @@ export interface Database {
                     records_processed?: number | null
                     ran_at: string
                     error_message?: string | null
+                    metadata?: Json | null
                 }
                 Update: {
                     id?: string
@@ -368,6 +377,46 @@ export interface Database {
                     records_processed?: number | null
                     ran_at?: string
                     error_message?: string | null
+                    metadata?: Json | null
+                }
+                Relationships: []
+            }
+            fire_snapshots: {
+                Row: {
+                    id: string
+                    region_name: string
+                    bbox: Json
+                    hotspot_count: number
+                    high_confidence_count: number
+                    max_frp: number | null
+                    avg_frp: number | null
+                    snapshot_date: string
+                    last_updated: string
+                    metadata: Json | null
+                }
+                Insert: {
+                    id?: string
+                    region_name: string
+                    bbox: Json
+                    hotspot_count?: number
+                    high_confidence_count?: number
+                    max_frp?: number | null
+                    avg_frp?: number | null
+                    snapshot_date?: string
+                    last_updated?: string
+                    metadata?: Json | null
+                }
+                Update: {
+                    id?: string
+                    region_name?: string
+                    bbox?: Json
+                    hotspot_count?: number
+                    high_confidence_count?: number
+                    max_frp?: number | null
+                    avg_frp?: number | null
+                    snapshot_date?: string
+                    last_updated?: string
+                    metadata?: Json | null
                 }
                 Relationships: []
             }
