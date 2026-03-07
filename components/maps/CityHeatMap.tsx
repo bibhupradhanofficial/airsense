@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import Map, { Source, Layer, NavigationControl, Marker } from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useAQISubscription } from '@/lib/realtime/useAQISubscription';
 import { useAQIStore } from '@/store/aqiStore';
 import { getAQICategory } from '@/lib/utils/aqi';
@@ -90,14 +90,15 @@ export function CityHeatMap() {
         enabled: !!adminContext
     });
 
-    const { data: interpolatedGrid, isLoading } = useQuery({
-        queryKey: ['heatmap-grid', viewState.longitude, viewState.latitude],
+    const { data: interpolatedGrid, isLoading, isFetching } = useQuery({
+        queryKey: ['heatmap-grid', debouncedViewState.longitude, debouncedViewState.latitude],
         queryFn: async () => {
+            const { longitude, latitude } = debouncedViewState;
             const delta = 0.2;
-            const minLng = viewState.longitude - delta;
-            const minLat = viewState.latitude - delta;
-            const maxLng = viewState.longitude + delta;
-            const maxLat = viewState.latitude + delta;
+            const minLng = longitude - delta;
+            const minLat = latitude - delta;
+            const maxLng = longitude + delta;
+            const maxLat = latitude + delta;
 
             const bbox = `${minLat},${minLng},${maxLat},${maxLng}`;
             const res = await fetch(`/api/interpolate?bbox=${bbox}&resolution=0.01`);
@@ -105,6 +106,7 @@ export function CityHeatMap() {
             return res.json();
         },
         staleTime: 60000,
+        placeholderData: keepPreviousData,
     });
 
     const { data: fireData } = useQuery({
@@ -275,7 +277,7 @@ export function CityHeatMap() {
             </CardHeader>
 
             <div className="flex-1 w-full relative">
-                {isLoading && (
+                {isLoading && !interpolatedGrid && (
                     <div className="absolute inset-0 bg-[#0A1628]/50 backdrop-blur-sm z-20 flex items-center justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00D4FF]" />
                     </div>

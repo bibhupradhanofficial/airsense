@@ -88,15 +88,8 @@ export default function AdminDashboardOverview() {
 
             </div>
 
-            {/* 3. India City Performance Rankings (Full Width) */}
-            {isAllCities && (
-                <div className="w-full mt-6">
-                    <NationalRankingsTable />
-                </div>
-            )}
-
-            {/* 4. Bottom Row: Sources (Left) and Trend (Right) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[350px]">
+            {/* 3. Bottom Row: Sources (Left) and Trend (Right) */}
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[368px]">
                 {/* Sources Chart (Left side of Trend) */}
                 <div className="lg:col-span-4 overflow-hidden">
                     <SourcesChart />
@@ -107,6 +100,13 @@ export default function AdminDashboardOverview() {
                     <TrendChart />
                 </div>
             </div>
+
+            {/* 4. India City Performance Rankings (Full Width) */}
+            {isAllCities && (
+                <div className="w-full mt-6">
+                    <NationalRankingsTable />
+                </div>
+            )}
 
         </div>
     );

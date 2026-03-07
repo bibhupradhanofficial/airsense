@@ -63,7 +63,7 @@ async function seed() {
         }
 
         const assigned_city_id = locations?.[0]?.id || null;
-        const assigned_city_name = locations?.[0]?.name || city.name;
+        const assigned_city_name = city.name;
 
         if (!assigned_city_id) {
             console.warn(`Warning: Could not find location ID for ${city.name}. Invitation will be created without ID.`);

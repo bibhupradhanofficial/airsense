@@ -25,7 +25,7 @@ import {
 import { format } from 'date-fns';
 
 export default function SettingsPage() {
-    const { profile, fullName, email, isSuperAdmin, adminContext } = useAdminContext();
+    const { profile, fullName, email, isCentralAdmin, adminContext } = useAdminContext();
     const supabase = createClient();
 
     // Notification states
@@ -154,10 +154,10 @@ export default function SettingsPage() {
                         <div>
                             <Label className="text-gray-500 text-xs uppercase tracking-widest font-bold">Role & Scope</Label>
                             <div className="flex items-center gap-2 mt-1">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${isSuperAdmin ? 'bg-amber-500/20 text-amber-500' : 'bg-[#00D4FF]/20 text-[#00D4FF]'}`}>
-                                    {isSuperAdmin ? 'Central Administrator' : 'City Administrator'}
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${isCentralAdmin ? 'bg-amber-500/20 text-amber-500' : 'bg-[#00D4FF]/20 text-[#00D4FF]'}`}>
+                                    {isCentralAdmin ? 'Central Administrator' : 'City Administrator'}
                                 </span>
-                                {!isSuperAdmin && (
+                                {!isCentralAdmin && (
                                     <span className="text-white font-medium">({profile.assigned_city_name})</span>
                                 )}
                             </div>
@@ -296,7 +296,7 @@ export default function SettingsPage() {
             </Card>
 
             {/* 4. Super Admin Section */}
-            {isSuperAdmin && (
+            {isCentralAdmin && (
                 <Card className="bg-[#0e213b] border-[#1e2a3b] shadow-xl border-t-2 border-t-amber-500/50">
                     <CardHeader className="border-b border-[#1e2a3b] bg-amber-500/5">
                         <CardTitle className="flex items-center gap-2 text-amber-500">
