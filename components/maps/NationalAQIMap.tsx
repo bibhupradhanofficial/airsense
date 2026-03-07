@@ -33,12 +33,15 @@ export function NationalAQIMap() {
     const { data: cityData, isLoading } = useQuery({
         queryKey: ['national-aqi-data'],
         queryFn: async () => {
+            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
             const { data: locations, error } = await supabase
                 .from('locations')
                 .select(`
                     id,
                     name,
                     city,
+                    state,
                     latitude,
                     longitude,
                     aqi_readings (
@@ -51,7 +54,8 @@ export function NationalAQIMap() {
                         o3,
                         recorded_at
                     )
-                `);
+                `)
+                .filter('aqi_readings.recorded_at', 'gte', twentyFourHoursAgo);
 
             if (error) throw error;
 
@@ -65,7 +69,7 @@ export function NationalAQIMap() {
                         name: city,
                         lat: loc.latitude,
                         lon: loc.longitude,
-                        state: 'Region', // We don't have state in locations, using 'Region' as fallback
+                        state: loc.state || 'Region',
                         aqi: 0,
                         readingsCount: 0,
                         anomalies: 0,
@@ -262,101 +266,41 @@ export function NationalAQIMap() {
     }, [cityData, fires]);
 
     return (
-        <div className="flex flex-col space-y-6">
-            {/* Map Container */}
-            <Card className="bg-[#132238] border-[#1e2a3b] overflow-hidden group shadow-2xl relative">
-                <div className="absolute top-4 left-4 z-10 bg-[#0A1628]/80 backdrop-blur-md border border-[#1e2a3b] rounded-lg p-3">
-                    <h3 className="text-white font-bold text-xs uppercase tracking-widest mb-2">AQI Legend</h3>
-                    <div className="space-y-1">
-                        {[
-                            { label: 'Hazardous (300+)', color: '#ef4444' },
-                            { label: 'Poor (201-300)', color: '#f97316' },
-                            { label: 'Moderate (101-200)', color: '#eab308' },
-                            { label: 'Good (0-100)', color: '#22c55e' }
-                        ].map(item => (
-                            <div key={item.label} className="flex items-center space-x-2">
-                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-                                <span className="text-[10px] text-gray-300 font-medium">{item.label}</span>
-                            </div>
-                        ))}
+        <Card className="bg-[#132238] border-[#1e2a3b] overflow-hidden group shadow-2xl relative h-full">
+            <div className="absolute top-4 left-4 z-10 bg-[#0A1628]/80 backdrop-blur-md border border-[#1e2a3b] rounded-lg p-3">
+                <h3 className="text-white font-bold text-xs uppercase tracking-widest mb-2">AQI Legend</h3>
+                <div className="space-y-1">
+                    {[
+                        { label: 'Hazardous (300+)', color: '#ef4444' },
+                        { label: 'Poor (201-300)', color: '#f97316' },
+                        { label: 'Moderate (101-200)', color: '#eab308' },
+                        { label: 'Good (0-100)', color: '#22c55e' }
+                    ].map(item => (
+                        <div key={item.label} className="flex items-center space-x-2">
+                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
+                            <span className="text-[10px] text-gray-300 font-medium">{item.label}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {fires?.hotspots && (
+                <div className="absolute top-4 right-16 z-10">
+                    <div className={`px-4 py-2 rounded-full border backdrop-blur-md transition-all flex items-center gap-2 shadow-2xl ${fires.hotspots.length > 50
+                        ? 'bg-red-500/20 border-red-500/50 text-red-400'
+                        : 'bg-orange-500/20 border-orange-500/50 text-orange-400'
+                        }`}>
+                        <Flame className="h-4 w-4 animate-pulse" />
+                        <span className="font-black text-sm">{fires.hotspots.length} ACTIVE FIRES DETECTED</span>
                     </div>
                 </div>
-
-                {fires?.hotspots && (
-                    <div className="absolute top-4 right-16 z-10">
-                        <div className={`px-4 py-2 rounded-full border backdrop-blur-md transition-all flex items-center gap-2 shadow-2xl ${fires.hotspots.length > 50
-                                ? 'bg-red-500/20 border-red-500/50 text-red-400'
-                                : 'bg-orange-500/20 border-orange-500/50 text-orange-400'
-                            }`}>
-                            <Flame className="h-4 w-4 animate-pulse" />
-                            <span className="font-black text-sm">{fires.hotspots.length} ACTIVE FIRES DETECTED</span>
-                        </div>
-                    </div>
-                )}
-                <CardHeader className="border-b border-[#1e2a3b] bg-[#0A1628]/50 flex flex-row items-center justify-between">
-                    <CardTitle className="text-white text-lg">National Air Quality Distribution</CardTitle>
-                    <Badge variant="outline" className="text-[#00D4FF] border-[#00D4FF]/30">LIVE National Stats</Badge>
-                </CardHeader>
-                <div ref={mapContainer} className="h-[500px] w-full" />
-            </Card>
-
-            {/* Rankings Table */}
-            <Card className="bg-[#132238] border-[#1e2a3b] shadow-2xl">
-                <CardHeader className="border-b border-[#1e2a3b]">
-                    <div className="flex items-center justify-between">
-                        <CardTitle className="text-white text-lg font-bold">India City Performance Rankings</CardTitle>
-                        <span className="text-xs text-gray-500 font-medium">Sorted by highest AQI</span>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <Table>
-                        <TableHeader className="bg-[#0A1628]/80 backdrop-blur-sm">
-                            <TableRow className="border-[#1e2a3b] hover:bg-transparent">
-                                <TableHead className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Rank</TableHead>
-                                <TableHead className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">City</TableHead>
-                                <TableHead className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">State</TableHead>
-                                <TableHead className="text-gray-400 font-bold uppercase text-[10px] tracking-widest text-right">AQI</TableHead>
-                                <TableHead className="text-gray-400 font-bold uppercase text-[10px] tracking-widest text-right">Top Source</TableHead>
-                                <TableHead className="text-gray-400 font-bold uppercase text-[10px] tracking-widest text-right">Anomalies</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {cityData?.map((city, index) => (
-                                <TableRow key={city.name} className="border-[#1e2a3b] hover:bg-[#1e2a3b]/50 group transition-all duration-300">
-                                    <TableCell className="text-gray-500 font-mono text-sm">{index + 1}</TableCell>
-                                    <TableCell className="text-white font-bold">{city.name}</TableCell>
-                                    <TableCell className="text-gray-400 text-sm">{city.state}</TableCell>
-                                    <TableCell className="text-right">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-black shadow-lg ${city.aqi > 300 ? 'bg-red-500/20 text-red-500 shadow-red-500/10' :
-                                            city.aqi > 200 ? 'bg-orange-500/20 text-orange-500 shadow-orange-500/10' :
-                                                city.aqi > 100 ? 'bg-yellow-500/20 text-yellow-500 shadow-yellow-500/10' :
-                                                    'bg-green-500/20 text-green-500 shadow-green-500/10'
-                                            }`}>
-                                            {city.aqi}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Badge variant="outline" className="text-teal-400 border-teal-900/50 bg-teal-900/10">
-                                            {city.topPollutant}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {city.anomalies > 0 ? (
-                                            <div className="flex items-center justify-end space-x-1 text-orange-500 font-bold text-sm">
-                                                <span>{city.anomalies}</span>
-                                                <AlertTriangle className="h-4 w-4" />
-                                            </div>
-                                        ) : (
-                                            <span className="text-gray-600 text-sm italic">Clean</span>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-        </div>
+            )}
+            <CardHeader className="border-b border-[#1e2a3b] bg-[#0A1628]/50 flex flex-row items-center justify-between">
+                <CardTitle className="text-white text-lg">National Air Quality Distribution</CardTitle>
+                <Badge variant="outline" className="text-[#00D4FF] border-[#00D4FF]/30">LIVE National Stats</Badge>
+            </CardHeader>
+            <div ref={mapContainer} className="h-full min-h-[500px] w-full" />
+        </Card>
     );
 }
 

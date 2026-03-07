@@ -26,6 +26,7 @@ import { PollutedWards } from '@/components/dashboard/PollutedWards';
 import { LatestPolicy } from '@/components/dashboard/LatestPolicy';
 import { SourcesChart } from '@/components/dashboard/SourcesChart';
 import { TrendChart } from '@/components/dashboard/TrendChart';
+import { NationalRankingsTable } from '@/components/dashboard/NationalRankingsTable';
 
 export default function AdminDashboardOverview() {
     const { fullName, isCentralAdmin, isCityAdmin, cityName } = useAdminContext();
@@ -87,7 +88,14 @@ export default function AdminDashboardOverview() {
 
             </div>
 
-            {/* 3. Bottom Row: Sources (Left) and Trend (Right) */}
+            {/* 3. India City Performance Rankings (Full Width) */}
+            {isAllCities && (
+                <div className="w-full mt-6">
+                    <NationalRankingsTable />
+                </div>
+            )}
+
+            {/* 4. Bottom Row: Sources (Left) and Trend (Right) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[350px]">
                 {/* Sources Chart (Left side of Trend) */}
                 <div className="lg:col-span-4 overflow-hidden">

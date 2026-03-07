@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -44,9 +45,14 @@ export function PollutionSourceCard({ data }: PollutionSourceCardProps) {
         }
     });
 
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => { setMounted(true); }, []);
+
     // Recharts RadialBar expects an array of data. We want a gauge (0-10).
     const gaugeData = [{ value: data.anomalyScore }];
     const gaugeColor = data.anomalyScore > 7 ? '#ef4444' : data.anomalyScore > 4 ? '#f59e0b' : '#34d399';
+
+    if (!mounted) return <div className="h-[200px] w-full bg-[#132238] animate-pulse rounded-xl" />;
 
     return (
         <Card className="bg-[#132238] border-[#1e2a3b] hover:border-[#00D4FF]/30 transition-all shadow-xl group">
@@ -111,7 +117,7 @@ export function PollutionSourceCard({ data }: PollutionSourceCardProps) {
                             <span className="text-[11px] font-bold text-gray-400 uppercase">Detection Confidence</span>
                         </div>
                         <p className="text-xs text-gray-300">
-                            Pattern matched with high confidence ({Math.floor(80 + Math.random() * 15)}%). Automated intervention recommended.
+                            Pattern matched with high confidence (92%). Automated intervention recommended.
                         </p>
                     </div>
                 </div>

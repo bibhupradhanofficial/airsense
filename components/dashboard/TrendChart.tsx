@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
@@ -8,12 +9,15 @@ import { createClient } from '@/lib/supabase/client';
 import { useAdminContext } from '@/lib/admin/useAdminContext';
 import { useAdminStore } from '@/store/adminStore';
 import { applyCityFilter } from '@/lib/admin/queryHelpers';
-import { format, subDays, startOfDay } from 'date-fns';
+import { format, subDays } from 'date-fns';
 
 export function TrendChart() {
     const supabase = createClient();
     const { adminContext, isCentralAdmin } = useAdminContext();
     const { selectedCityId } = useAdminStore();
+
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => { setMounted(true); }, []);
 
     const { data: trendData, isLoading } = useQuery({
         queryKey: ['aqi-7day-trend', adminContext, selectedCityId],
@@ -86,11 +90,11 @@ export function TrendChart() {
                 </div>
             </CardHeader>
             <CardContent className="p-6 flex-1 min-h-[250px]">
-                {isLoading ? (
+                {(!mounted || isLoading) ? (
                     <div className="w-full h-full flex items-center justify-center">
                         <div className="animate-pulse flex space-x-2 items-end h-[150px]">
                             {[1, 2, 3, 4, 5, 6, 7].map(i => (
-                                <div key={i} className="w-12 bg-[#1e2a3b] rounded-t opacity-50" style={{ height: `${Math.random() * 100}%` }} />
+                                <div key={i} className="w-12 bg-[#1e2a3b] rounded-t opacity-50" style={{ height: `${(i * 13) % 100}%` }} />
                             ))}
                         </div>
                     </div>

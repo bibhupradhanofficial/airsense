@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
@@ -23,6 +24,9 @@ export function SourcesChart() {
     const supabase = createClient();
     const { adminContext, isCentralAdmin, cityName } = useAdminContext();
     const { selectedCityId } = useAdminStore();
+
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => { setMounted(true); }, []);
 
     const activeCity = isCentralAdmin ? (selectedCityId || 'National') : cityName;
 
@@ -79,7 +83,7 @@ export function SourcesChart() {
             </CardHeader>
 
             <CardContent className="p-4 flex-1 flex flex-col">
-                {isLoading ? (
+                {(!mounted || isLoading) ? (
                     <div className="flex-1 flex justify-center items-center">
                         <div className="w-32 h-32 rounded-full border-4 border-[#1e2a3b] border-t-purple-500 animate-spin" />
                     </div>
@@ -98,7 +102,7 @@ export function SourcesChart() {
                                     stroke="#132238"
                                     strokeWidth={2}
                                 >
-                                    {sources?.map((entry, index) => (
+                                    {sources?.map((entry: any, index: number) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || COLORS.UNKNOWN} />
                                     ))}
                                 </Pie>
