@@ -206,7 +206,7 @@ export default function AboutPage() {
                                 number="4"
                                 title="Policy Recommendations"
                                 icon={FileText}
-                                description="When anomalies are detected, a Retrieval-Augmented Generation (RAG) system powered by Claude AI synthesizes forecasts and source data to generate structured, actionable recommendations for administrators."
+                                description="When anomalies are detected, a Retrieval-Augmented Generation (RAG) system powered by Google Gemini synthesizes forecasts and source data to generate structured, actionable recommendations for administrators."
                             />
                         </div>
                     </div>
@@ -343,7 +343,7 @@ export default function AboutPage() {
                     <div className="flex flex-wrap justify-center gap-3">
                         {[
                             "Next.js", "TypeScript", "Supabase", "Mapbox GL JS",
-                            "Apache Kafka (roadmap)", "Anthropic Claude", "Sentinel Hub",
+                            "Apache Kafka (roadmap)", "Google Gemini", "Sentinel Hub",
                             "OpenAQ", "Recharts", "Tailwind CSS", "Vercel", "PostgreSQL"
                         ].map((tech) => (
                             <TechChip key={tech} label={tech} />

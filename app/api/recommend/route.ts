@@ -1,14 +1,20 @@
 import { NextResponse } from 'next/server';
-import { Anthropic } from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { retrieveRelevantDocs } from '@/lib/rag/retrieval';
 import { Database } from '@/types/database';
 import { FireRiskAssessment } from '@/lib/api-clients/firms';
 
-const anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY || '',
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
+const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+    generationConfig: {
+        responseMimeType: "application/json",
+    }
 });
+
+
 
 // Using a fallback mock if no API key is set for robust development
 const MOCK_LLM_RESPONSE = {
@@ -125,7 +131,7 @@ export async function POST(request: Request) {
             `${idx + 1}. [${doc.category}] ${doc.title}: ${doc.content}`
         ).join('\n\n');
 
-        // 3. Build Anthropic Prompts
+        // 3. Build Google Prompts
         const systemPrompt = `You are an expert environmental policy advisor for urban air quality management in India. You have deep knowledge of CPCB norms, GRAP, the Air (Prevention and Control of Pollution) Act 1981, and WHO air quality guidelines. You must provide structured, actionable, time-bound policy recommendations for city administrators.`;
 
         const userPrompt = `CURRENT ANOMALY ALERT:
@@ -186,8 +192,8 @@ Respond ONLY with the JSON object. No preamble or explanation outside the JSON.`
 
         let recommendationPayload;
 
-        if (!process.env.ANTHROPIC_API_KEY) {
-            console.warn("ANTHROPIC_API_KEY is not set. Falling back to rule-based mock response.");
+        if (!process.env.GOOGLE_API_KEY) {
+            console.warn("GOOGLE_API_KEY is not set. Falling back to rule-based mock response.");
 
             // Very rudimentary generic fallback logic incorporating RAG where possible
             recommendationPayload = {
@@ -196,28 +202,20 @@ Respond ONLY with the JSON object. No preamble or explanation outside the JSON.`
                 regulatoryReferences: retrievedDocs.length > 0 ? [retrievedDocs[0].title] : MOCK_LLM_RESPONSE.regulatoryReferences
             };
         } else {
-            // 4. Call Anthropic Claude API
-            const message = await anthropic.messages.create({
-                model: 'claude-3-5-sonnet-20240620', // Note: using 20240620 as it's the current widespread stable for sonnet 4 equivalents. Adjust if exact string required.
-                max_tokens: 1024,
-                temperature: 0.2,
-                system: systemPrompt,
-                messages: [
-                    {
-                        role: 'user',
-                        content: userPrompt
-                    }
-                ]
-            });
+            // 4. Call Google Gemini 2.0 API
+            const result = await model.generateContent([
+                { text: systemPrompt },
+                { text: userPrompt },
+            ]);
 
-            const responseText = message.content[0].type === 'text' ? message.content[0].text : '{}';
+            const responseText = result.response.text();
 
             try {
-                // Strip any potential markdown code blocks Claude might accidentally include despite instructions
+                // Gemini with forced JSON response will return valid JSON
                 const cleanedText = responseText.replace(/```json\n?|\n?```/g, '').trim();
                 recommendationPayload = JSON.parse(cleanedText);
             } catch (_parseError) {
-                console.error("Failed to parse Claude JSON response:", responseText);
+                console.error("Failed to parse Gemini JSON response:", responseText);
                 return NextResponse.json({ error: 'Failed to process AI response format' }, { status: 500 });
             }
         }
@@ -239,8 +237,9 @@ Respond ONLY with the JSON object. No preamble or explanation outside the JSON.`
                 recommendation_text: JSON.stringify(recommendationPayload), // Storing the full JSON structure in text field
                 status: 'pending',
                 generated_by: 'ai_engine',
-                fire_risk_data: fireRiskAssessment // Persist FIRMS data
+                fire_risk_data: fireRiskAssessment as any // Persist FIRMS data (cast to any to satisfy Json type)
             })
+
             .select()
             .single();
 

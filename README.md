@@ -10,24 +10,28 @@ Built with **Next.js 15**, **Supabase**, and **Tailwind CSS**, AirSense delivers
 - **Real-time AQI Tracking**: Interactive maps and dashboards showing current air quality data.
 - **GPS-First Experience**: Seamlessly find AQI data for your current location with automatic geocoding.
 - **Smart Search**: Quickly find air quality information for any city or area.
+- **Personalized Health Guides**: Hyper-local health advisories based on current AQI conditions and location.
 - **Historical Analysis**: View trends and patterns over time with interactive charts.
 
 ### 🛠️ For Administrators
-- **Admin Roles**: Sophisticated role-based access control (Super Admin & City Admin).
-- **Data Management**: Tools for manual data refresh and monitoring.
+- **Role-Based Access Control**: Secure portals for Super Admins and City Admins.
+- **City-Specific Dashboards**: Tailored views for city administrators to monitor local metrics.
+- **NASA FIRMS Integration**: Real-time fire and biomass burning detection to correlate with pollution spikes.
+- **Sentinel Hub Integration**: Satellite imagery for environmental monitoring.
+- **Data Management**: Tools for manual data refresh and system monitoring.
 - **Invite System**: Secure onboarding for new administrators via unique invite codes.
-- **Comprehensive Dashboard**: High-level overview of city-wide air quality metrics.
 
 ## 🛠️ Tech Stack
 
 - **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
 - **Database & Auth**: [Supabase](https://supabase.com/)
+- **Satellite Data**: [Sentinel Hub](https://www.sentinel-hub.com/) & [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 - **Animations**: [Framer Motion](https://www.framer.com/motion/)
 - **Charts**: [Recharts](https://recharts.org/)
 - **Maps**: [Mapbox GL JS](https://www.mapbox.com/)
-- **Icons**: [Lucide React](https://lucide.dev/)
 - **State Management**: [Zustand](https://zustand-demo.pmnd.rs/)
+- **Icons**: [Lucide React](https://lucide.dev/)
 
 ## 🏗️ Project Structure
 
@@ -46,6 +50,7 @@ Built with **Next.js 15**, **Supabase**, and **Tailwind CSS**, AirSense delivers
 ├── lib/                  # Utility functions and shared logic
 ├── store/                # Zustand client-state stores
 ├── types/                # TypeScript definitions
+├── scripts/              # Data seeding and maintenance scripts
 └── supabase/             # Database migrations and configuration
 ```
 
@@ -55,6 +60,7 @@ Built with **Next.js 15**, **Supabase**, and **Tailwind CSS**, AirSense delivers
 - Node.js 18+ 
 - A Supabase project
 - A Mapbox API key
+- (Optional) NASA FIRMS API key for fire data
 
 ### Installation
 
