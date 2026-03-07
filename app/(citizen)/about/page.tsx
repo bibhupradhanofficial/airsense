@@ -19,7 +19,8 @@ import {
     Database,
     Cloud,
     CheckCircle2,
-    Info
+    Info,
+    Flame
 } from 'lucide-react';
 import {
     Accordion,
@@ -187,7 +188,7 @@ export default function AboutPage() {
                                 number="1"
                                 title="Data Collection"
                                 icon={Satellite}
-                                description="AirSense ingests real-time data from meteorological APIs (temperature, wind, humidity) and satellite remote sensing (Sentinel-5P TROPOMI for NO₂ and aerosol optical depth). IoT ground sensor integration is coming soon."
+                                description="AirSense ingests real-time data from meteorological APIs and multiple satellite constellations — including Sentinel-5P for gaseous pollutants and NASA FIRMS for thermal fire detection."
                             />
                             <StepCard
                                 number="2"
@@ -242,6 +243,13 @@ export default function AboutPage() {
                             url="sentinel.esa.int"
                         />
                         <DataSourceCard
+                            title="NASA FIRMS"
+                            icon={Flame}
+                            description="NASA's Fire Information for Resource Management System. Provides near real-time thermal hotspots from MODIS and VIIRS satellites to track biomass burning."
+                            url="firms.modaps.eosdis.nasa.gov"
+                            badge="Critical"
+                        />
+                        <DataSourceCard
                             title="IoT Sensor Network"
                             icon={Database}
                             description="A planned dense grid of calibrated low-cost sensors across city wards for hyper-local, ground-level measurements. Integration in progress."
@@ -281,6 +289,11 @@ export default function AboutPage() {
                                         <td className="px-6 py-4">India-wide</td>
                                     </tr>
                                     <tr>
+                                        <td className="px-6 py-4 font-semibold text-zinc-900">NASA FIRMS (Thermal)</td>
+                                        <td className="px-6 py-4">Every 3 hours</td>
+                                        <td className="px-6 py-4">Global/National</td>
+                                    </tr>
+                                    <tr>
                                         <td className="px-6 py-4 font-semibold text-zinc-900">Interpolated estimates</td>
                                         <td className="px-6 py-4">Every 15 minutes</td>
                                         <td className="px-6 py-4">Gap-filled</td>
@@ -289,7 +302,7 @@ export default function AboutPage() {
                             </table>
                         </div>
 
-                        <div className="mt-12 text-center">
+                        <div className="mt-6 mb-6 text-center">
                             <Button asChild variant="outline" className="border-teal-600 text-teal-600 hover:bg-teal-50 font-bold px-8">
                                 <Link href="/data-sources">
                                     Explore Detailed Methodology <ArrowRight className="ml-2 h-4 w-4" />
@@ -429,6 +442,14 @@ export default function AboutPage() {
                             </AccordionTrigger>
                             <AccordionContent className="text-zinc-600 leading-relaxed pb-6">
                                 Yes. IoT ground-sensor integration is on our roadmap and will provide hyper-local, ward-level accuracy. The current platform is designed to incorporate IoT data seamlessly once deployed.
+                            </AccordionContent>
+                        </AccordionItem>
+                        <AccordionItem value="item-7" className="border-zinc-100 px-4 transition-all hover:bg-zinc-50/50">
+                            <AccordionTrigger className="text-left font-bold text-zinc-900 hover:text-teal-600 no-underline py-6">
+                                How does AirSense track crop burning?
+                            </AccordionTrigger>
+                            <AccordionContent className="text-zinc-600 leading-relaxed pb-6">
+                                We integrate with the NASA FIRMS (Fire Information for Resource Management System) satellite feed to detect thermal anomalies in real-time. By cross-referencing these fire hotspots with wind patterns, we can accurately determine when a pollution spike in a city like Delhi is caused by stubble burning hundreds of kilometers away.
                             </AccordionContent>
                         </AccordionItem>
                     </Accordion>
