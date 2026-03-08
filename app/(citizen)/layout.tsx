@@ -2,6 +2,36 @@ import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Wind, Github } from 'lucide-react';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: "AirSense | Real-time Air Quality for Your City",
+    description: "Track real-time AQI, pollution sources, and get personalized health advisories for any location in India. Powered by satellite data and AI.",
+    openGraph: {
+        title: "AirSense | Real-time Air Quality for Your City",
+        description: "Track real-time AQI, pollution sources, and get personalized health advisories for any location in India. Powered by satellite data and AI.",
+        url: 'https://airsense.vercel.app', // Replace with actual URL if different
+        siteName: 'AirSense Bharat',
+        images: [
+            {
+                url: '/og-image.png', // Ensure this image exists in public folder
+                width: 1200,
+                height: 630,
+                alt: 'AirSense - Real-time AQI Dashboard',
+            },
+        ],
+        locale: 'en_IN',
+        type: 'website',
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'AirSense | Real-time Air Quality for Your City',
+        description: 'Track real-time AQI, pollution sources, and get personalized health advisories for any location in India.',
+        images: ['/og-image.png'],
+        creator: '@airsense_india',
+    },
+    keywords: ['AQI', 'Air Quality', 'India Pollution', 'Sentinel-5P', 'OpenAQ', 'Satellite Air Quality'],
+};
 
 export default function CitizenLayout({
     children,

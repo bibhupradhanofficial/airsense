@@ -8,6 +8,7 @@ import { AQReading } from '@/types/aqi';
 import { MapPin, Info, ChevronRight } from 'lucide-react';
 import { AQIGauge } from '@/components/citizen/AQIGauge';
 import { LocationSearch } from '@/components/citizen/LocationSearch';
+import { useRouter } from 'next/navigation';
 import { PollutantCard } from '@/components/citizen/PollutantCard';
 import { ForecastRow } from '@/components/citizen/ForecastRow';
 import { HealthAdvisory } from '@/components/citizen/HealthAdvisory';
@@ -100,6 +101,8 @@ export default function CitizenHomePage() {
         }));
         setForecast(generated);
     }, [aqiData]);
+
+    const router = useRouter();
 
     return (
         <div className="flex flex-col gap-16 pb-20">
@@ -231,7 +234,7 @@ export default function CitizenHomePage() {
                                     <p className="text-xs text-zinc-400 italic">Not your location? Search below</p>
                                 </div>
 
-                                <LocationSearch />
+                                <LocationSearch onSelect={(l) => router.push(`/search?q=${l.name}`)} />
                             </div>
                         </>
                     )}

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { LocationSearch } from '@/components/citizen/LocationSearch';
 import { AQIGauge } from '@/components/citizen/AQIGauge';
 import { PollutantCard } from '@/components/citizen/PollutantCard';
@@ -47,6 +48,67 @@ interface Location {
     lastUpdated: string;
 }
 
+const fetchDataForLocation = async (name: string) => {
+    const supabase = createClient();
+
+    // Try to find the location in our database first
+    const { data: dbLocation } = await supabase
+        .from('locations')
+        .select('*')
+        .ilike('name', `%${name}%`)
+        .limit(1)
+        .single();
+
+    if (dbLocation) {
+        // Fetch latest reading from DB
+        const { data: latestReading } = await supabase
+            .from('aqi_readings')
+            .select('*')
+            .eq('location_id', dbLocation.id)
+            .order('recorded_at', { ascending: false })
+            .limit(1)
+            .single();
+
+        return {
+            id: dbLocation.id,
+            name: dbLocation.name,
+            state: dbLocation.state || 'State',
+            country: dbLocation.country || 'India 🇮🇳',
+            lat: dbLocation.latitude,
+            lng: dbLocation.longitude,
+            aqi: latestReading?.aqi_value || 150,
+            lastUpdated: latestReading ? new Date(latestReading.recorded_at).toLocaleTimeString() : 'Recently',
+        };
+    }
+
+    // Mock fallback if not in DB
+    return {
+        id: null,
+        name,
+        state: 'State',
+        country: 'India 🇮🇳',
+        lat: name.toLowerCase() === 'mumbai' ? 19.0760 : 28.6139,
+        lng: name.toLowerCase() === 'mumbai' ? 72.8777 : 77.2090,
+        aqi: 120,
+        lastUpdated: 'Just now',
+    };
+};
+
+function SearchParamsHandler({ onSearch }: { onSearch: (q: string) => void }) {
+    const searchParams = useSearchParams();
+    const query = searchParams.get('q');
+    const lastQueryRef = React.useRef<string | null>(null);
+
+    useEffect(() => {
+        if (query && query !== lastQueryRef.current) {
+            onSearch(query);
+            lastQueryRef.current = query;
+        }
+    }, [query, onSearch]);
+
+    return null;
+}
+
 export default function SearchPage() {
     const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
     const [compareLocation, setCompareLocation] = useState<Location | null>(null);
@@ -84,53 +146,7 @@ export default function SearchPage() {
         }
     }, []);
 
-    const fetchDataForLocation = async (name: string) => {
-        const supabase = createClient();
-
-        // Try to find the location in our database first
-        const { data: dbLocation } = await supabase
-            .from('locations')
-            .select('*')
-            .ilike('name', `%${name}%`)
-            .limit(1)
-            .single();
-
-        if (dbLocation) {
-            // Fetch latest reading from DB
-            const { data: latestReading } = await supabase
-                .from('aqi_readings')
-                .select('*')
-                .eq('location_id', dbLocation.id)
-                .order('recorded_at', { ascending: false })
-                .limit(1)
-                .single();
-
-            return {
-                id: dbLocation.id,
-                name: dbLocation.name,
-                state: dbLocation.state || 'State',
-                country: dbLocation.country || 'India 🇮🇳',
-                lat: dbLocation.latitude,
-                lng: dbLocation.longitude,
-                aqi: latestReading?.aqi_value || Math.floor(Math.random() * 250) + 50,
-                lastUpdated: latestReading ? new Date(latestReading.recorded_at).toLocaleTimeString() : new Date().toLocaleTimeString(),
-            };
-        }
-
-        // Mock fallback if not in DB
-        return {
-            id: null,
-            name,
-            state: 'State',
-            country: 'India 🇮🇳',
-            lat: name.toLowerCase() === 'mumbai' ? 19.0760 : 28.6139 + (Math.random() - 0.5) * 0.1,
-            lng: name.toLowerCase() === 'mumbai' ? 72.8777 : 77.2090 + (Math.random() - 0.5) * 0.1,
-            aqi: Math.floor(Math.random() * 250) + 50,
-            lastUpdated: new Date().toLocaleTimeString(),
-        };
-    };
-
-    const handleSearch = async (name: string) => {
+    const handleSearch = React.useCallback(async (name: string) => {
         setIsLoading(true);
         const data = await fetchDataForLocation(name);
 
@@ -151,21 +167,22 @@ export default function SearchPage() {
             }
 
             // Update recent searches only for main location
-            const updated = [name, ...recentSearches.filter(s => s !== name)].slice(0, 5);
-            setRecentSearches(updated);
-            localStorage.setItem('recent_searches', JSON.stringify(updated));
+            setRecentSearches(prev => {
+                const updated = [name, ...prev.filter(s => s !== name)].slice(0, 5);
+                localStorage.setItem('recent_searches', JSON.stringify(updated));
+                return updated;
+            });
         }
 
         setIsLoading(false);
-    };
+    }, [isComparing]);
 
     const handleRefresh = async () => {
         if (!selectedLocation) return;
-
         const now = Date.now();
         const storageKey = `last_refresh_${selectedLocation.name.toLowerCase().replace(/\s+/g, '_')}`;
         const lastRefresh = localStorage.getItem(storageKey);
-        const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+        const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
         if (lastRefresh && now - parseInt(lastRefresh) < REFRESH_INTERVAL_MS) {
             const remaining = Math.ceil((REFRESH_INTERVAL_MS - (now - parseInt(lastRefresh))) / 60000);
@@ -175,11 +192,8 @@ export default function SearchPage() {
 
         setIsRefreshing(true);
         localStorage.setItem(storageKey, now.toString());
-
         const data = await fetchDataForLocation(selectedLocation.name);
         setSelectedLocation(data);
-
-        // Refresh fire data
         try {
             const fireResp = await fetch(`/api/firms?lat=${data.lat}&lon=${data.lng}&radius=300&days=2`);
             if (fireResp.ok) {
@@ -189,7 +203,6 @@ export default function SearchPage() {
         } catch (e) {
             console.error("Failed to refresh fire data", e);
         }
-
         setIsRefreshing(false);
     };
 
@@ -228,6 +241,9 @@ export default function SearchPage() {
 
     return (
         <div className="container mx-auto max-w-6xl px-4 py-12 space-y-16">
+            <Suspense fallback={null}>
+                <SearchParamsHandler onSearch={handleSearch} />
+            </Suspense>
             {/* Search Interface */}
             <section className="flex flex-col items-center gap-8 text-center mt-8">
                 <div className="space-y-4">

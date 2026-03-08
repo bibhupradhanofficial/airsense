@@ -19,7 +19,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 import { useDebounce } from '@/lib/hooks/useDebounce'; // Assuming this exists or I'll implement inline
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
+const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN || '';
 
 const CITY_COORDINATES: Record<string, { lat: number, lng: number, zoom: number }> = {
     'Mumbai': { lat: 19.0760, lng: 72.8777, zoom: 11 },

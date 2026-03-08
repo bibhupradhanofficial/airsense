@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
         let usedSource: DataSource = 'auto';
 
         if (sourceParam === "auto" || sourceParam === "openaq") {
-            const readings = await fetchOpenAQReadings(lat, lon, 50); // 50km radius
+            const readings = await fetchOpenAQReadings(lat, lon, 25); // 25km radius (OpenAQ v3 limit)
             if (readings.length > 0) {
                 // sort by most recent or closest (we just take the first valid one here)
                 reading = readings[0];

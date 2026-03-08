@@ -22,7 +22,7 @@ export function PolicyCard({ recommendation, onApprove, onDismiss, isProcessing 
     const fireCoords = recommendation.fire_coordinates || [];
     const hasFires = fireCoords.length > 0;
 
-    const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN;
 
     // Generate static map URL if fires exist
     const staticMapUrl = hasFires && MAPBOX_TOKEN ? (() => {

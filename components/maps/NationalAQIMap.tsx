@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Flame } from 'lucide-react';
 
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
+mapboxgl.accessToken = process.env.MAPBOX_TOKEN || '';
 
 const NATIONAL_CENTER: [number, number] = [78.9629, 20.5937];
 
