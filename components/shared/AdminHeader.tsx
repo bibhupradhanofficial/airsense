@@ -33,11 +33,11 @@ export function AdminHeader() {
     const { data: cities, isLoading: isCitiesLoading } = useQuery({
         queryKey: ['available-cities'],
         queryFn: async () => {
-            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
             const { data: locations, error } = await supabase
                 .from('locations')
                 .select('city, aqi_readings(aqi_value, recorded_at)')
-                .filter('aqi_readings.recorded_at', 'gte', twentyFourHoursAgo)
+                .order('recorded_at', { foreignTable: 'aqi_readings', ascending: false })
+                .limit(1, { foreignTable: 'aqi_readings' })
                 .order('city');
 
             if (error) throw error;

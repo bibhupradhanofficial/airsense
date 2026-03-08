@@ -33,8 +33,6 @@ export function NationalAQIMap() {
     const { data: cityData, isLoading } = useQuery({
         queryKey: ['national-aqi-data'],
         queryFn: async () => {
-            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
             const { data: locations, error } = await supabase
                 .from('locations')
                 .select(`
@@ -55,7 +53,8 @@ export function NationalAQIMap() {
                         recorded_at
                     )
                 `)
-                .filter('aqi_readings.recorded_at', 'gte', twentyFourHoursAgo);
+                .order('recorded_at', { foreignTable: 'aqi_readings', ascending: false })
+                .limit(1, { foreignTable: 'aqi_readings' });
 
             if (error) throw error;
 

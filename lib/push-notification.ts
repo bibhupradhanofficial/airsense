@@ -16,12 +16,22 @@ export async function registerServiceWorker() {
 
 export async function subscribeUser() {
     const registration = await registerServiceWorker();
-    if (!registration) return;
+    if (!registration) {
+        console.error('Service Worker registration not found');
+        return;
+    }
+
+    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if (!vapidPublicKey) {
+        console.error('Push Notifications error: NEXT_PUBLIC_VAPID_PUBLIC_KEY is not set in environment variables.');
+        return;
+    }
 
     try {
+        const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!)
+            applicationServerKey
         });
 
         const supabase = createClient();
@@ -32,10 +42,15 @@ export async function subscribeUser() {
             threshold_aqi: 100 // Default
         });
 
-        if (error) console.error('Error saving subscription:', error);
+        if (error) {
+            console.error('Error saving subscription to database:', error);
+            return subscription; // Still return subscription if it was successful locally
+        }
+
+        console.log('User subscribed to push notifications successfully');
         return subscription;
     } catch (error) {
-        console.error('Failed to subscribe user:', error);
+        console.error('Failed to subscribe user to push notifications:', error);
     }
 }
 

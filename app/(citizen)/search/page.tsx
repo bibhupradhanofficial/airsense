@@ -32,6 +32,7 @@ import { useAQISubscription } from '@/lib/realtime/useAQISubscription';
 import { useAQIStore } from '@/store/aqiStore';
 import { createClient } from '@/lib/supabase/client';
 import { FireRiskAssessment, degreesToCardinal } from '@/lib/api-clients/firms';
+import { searchLocations } from '@/lib/api-clients/geocoding';
 
 const POPULAR_CITIES = [
     'Delhi', 'Mumbai', 'Bangalore', 'Hyderabad', 'Chennai', 'Kolkata', 'Bhubaneswar', 'Pune'
@@ -40,24 +41,33 @@ const POPULAR_CITIES = [
 interface Location {
     id: string | null;
     name: string;
+    city: string;
     state: string;
     country: string;
     lat: number;
     lng: number;
     aqi: number;
+    pollutants?: {
+        pm25?: number;
+        pm10?: number;
+        no2?: number;
+        so2?: number;
+        co?: number;
+        o3?: number;
+    };
     lastUpdated: string;
 }
 
-const fetchDataForLocation = async (name: string) => {
+const fetchDataForLocation = async (name: string): Promise<Location> => {
     const supabase = createClient();
 
-    // Try to find the location in our database first
+    // Try to find the location in our database first (check name or city)
     const { data: dbLocation } = await supabase
         .from('locations')
         .select('*')
-        .ilike('name', `%${name}%`)
+        .or(`name.ilike.%${name}%,city.ilike.%${name}%`)
         .limit(1)
-        .single();
+        .maybeSingle();
 
     if (dbLocation) {
         // Fetch latest reading from DB
@@ -67,28 +77,59 @@ const fetchDataForLocation = async (name: string) => {
             .eq('location_id', dbLocation.id)
             .order('recorded_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
         return {
             id: dbLocation.id,
             name: dbLocation.name,
+            city: dbLocation.city,
             state: dbLocation.state || 'State',
             country: dbLocation.country || 'India 🇮🇳',
             lat: dbLocation.latitude,
             lng: dbLocation.longitude,
             aqi: latestReading?.aqi_value || 150,
+            pollutants: latestReading ? {
+                pm25: latestReading.pm25 ?? undefined,
+                pm10: latestReading.pm10 ?? undefined,
+                no2: latestReading.no2 ?? undefined,
+                so2: latestReading.so2 ?? undefined,
+                co: latestReading.co ?? undefined,
+                o3: latestReading.o3 ?? undefined,
+            } : undefined,
             lastUpdated: latestReading ? new Date(latestReading.recorded_at).toLocaleTimeString() : 'Recently',
         };
     }
 
-    // Mock fallback if not in DB
+    // Fallback: Using Nominatim (OSM) for forward geocoding
+    try {
+        const suggestions = await searchLocations(name);
+        if (suggestions.length > 0) {
+            const loc = suggestions[0];
+            return {
+                id: null,
+                name: loc.display_name.split(',')[0],
+                city: loc.city || name,
+                state: loc.state || 'India',
+                country: 'India 🇮🇳',
+                lat: loc.lat,
+                lng: loc.lon,
+                aqi: 120, // Default for non-monitored locations
+                lastUpdated: 'Just now',
+            };
+        }
+    } catch (e) {
+        console.error("Geocoding fallback failed", e);
+    }
+
+    // Ultimate mock fallback
     return {
         id: null,
         name,
+        city: name,
         state: 'State',
         country: 'India 🇮🇳',
-        lat: name.toLowerCase() === 'mumbai' ? 19.0760 : 28.6139,
-        lng: name.toLowerCase() === 'mumbai' ? 72.8777 : 77.2090,
+        lat: name.toLowerCase() === 'mumbai' ? 19.0760 : (name.toLowerCase() === 'pune' ? 18.5204 : 28.6139),
+        lng: name.toLowerCase() === 'mumbai' ? 72.8777 : (name.toLowerCase() === 'pune' ? 73.8567 : 77.2090),
         aqi: 120,
         lastUpdated: 'Just now',
     };
@@ -117,6 +158,8 @@ export default function SearchPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [fireRisk, setFireRisk] = useState<FireRiskAssessment | null>(null);
+    const [nearbyStations, setNearbyStations] = useState<any[]>([]);
+    const [trendData, setTrendData] = useState<any[]>([]);
 
     // Initialize real-time subscription for selected location
     const { isConnected } = useAQISubscription(selectedLocation?.id ?? undefined);
@@ -131,9 +174,84 @@ export default function SearchPage() {
         return {
             ...selectedLocation,
             aqi: liveReading.aqi,
+            pollutants: liveReading.pollutants,
             lastUpdated: new Date(liveReading.timestamp).toLocaleTimeString(),
         };
     }, [selectedLocation, readings]);
+
+    // Fetch Nearby Stations & Trend Data
+    useEffect(() => {
+        if (!selectedLocation) return;
+
+        const fetchExtraData = async () => {
+            const supabase = createClient();
+
+            // 1. Fetch real trend data if location exists in DB
+            if (selectedLocation.id) {
+                const { data: history } = await supabase
+                    .from('aqi_readings')
+                    .select('aqi_value, recorded_at')
+                    .eq('location_id', selectedLocation.id)
+                    .order('recorded_at', { ascending: false })
+                    .limit(24);
+
+                if (history && history.length > 0) {
+                    setTrendData(history.reverse().map(h => ({
+                        time: new Date(h.recorded_at).getHours() + ':00',
+                        aqi: h.aqi_value
+                    })));
+                } else {
+                    // Fallback to random if no history
+                    setTrendData(Array.from({ length: 24 }).map((_, i) => ({
+                        time: `${(new Date().getHours() - (23 - i) + 24) % 24}:00`,
+                        aqi: Math.max(0, selectedLocation.aqi + Math.floor(Math.random() * 40 - 20)),
+                    })));
+                }
+            } else {
+                // Mock trend for non-DB locations
+                setTrendData(Array.from({ length: 24 }).map((_, i) => ({
+                    time: `${(new Date().getHours() - (23 - i) + 24) % 24}:00`,
+                    aqi: Math.max(0, selectedLocation.aqi + Math.floor(Math.random() * 40 - 20)),
+                })));
+            }
+
+            // 2. Fetch Nearby Stations (same city)
+            const { data: otherLocs } = await supabase
+                .from('locations')
+                .select('id, name, latitude, longitude')
+                .eq('city', selectedLocation.city)
+                .neq('name', selectedLocation.name)
+                .limit(5);
+
+            if (otherLocs && otherLocs.length > 0) {
+                const stationIds = otherLocs.map(l => l.id);
+                const { data: latestReadings } = await supabase
+                    .from('aqi_readings')
+                    .select('location_id, aqi_value')
+                    .in('location_id', stationIds)
+                    .order('recorded_at', { ascending: false });
+
+                const formatted = otherLocs.map(l => {
+                    const reading = latestReadings?.find(r => r.location_id === l.id);
+                    return {
+                        id: l.id,
+                        name: l.name,
+                        distance: 2.5 + Math.random() * 5, // Mock distance
+                        aqi: reading?.aqi_value || 100
+                    };
+                });
+                setNearbyStations(formatted);
+            } else {
+                // Fallback to some defaults if nothing found
+                setNearbyStations([
+                    { id: 'f1', name: 'City Center', distance: 1.2, aqi: selectedLocation.aqi + 5 },
+                    { id: 'f2', name: 'Industrial Zone', distance: 4.8, aqi: selectedLocation.aqi + 25 },
+                ]);
+            }
+        };
+
+        fetchExtraData();
+    }, [selectedLocation]);
 
     useEffect(() => {
         const saved = localStorage.getItem('recent_searches');
@@ -154,6 +272,16 @@ export default function SearchPage() {
             setCompareLocation(data);
         } else {
             setSelectedLocation(data);
+
+            // Populate global store with initial DB reading if it exists
+            if (data.id && data.pollutants) {
+                useAQIStore.getState().setReading(data.id, {
+                    aqi: data.aqi,
+                    pollutants: data.pollutants as any,
+                    source: 'auto',
+                    timestamp: new Date().toISOString()
+                });
+            }
 
             // Fetch fire risk for main location
             try {
@@ -194,6 +322,16 @@ export default function SearchPage() {
         localStorage.setItem(storageKey, now.toString());
         const data = await fetchDataForLocation(selectedLocation.name);
         setSelectedLocation(data);
+
+        // Update store
+        if (data.id && data.pollutants) {
+            useAQIStore.getState().setReading(data.id, {
+                aqi: data.aqi,
+                pollutants: data.pollutants as any,
+                source: 'auto',
+                timestamp: new Date().toISOString()
+            });
+        }
         try {
             const fireResp = await fetch(`/api/firms?lat=${data.lat}&lon=${data.lng}&radius=300&days=2`);
             if (fireResp.ok) {
@@ -206,38 +344,20 @@ export default function SearchPage() {
         setIsRefreshing(false);
     };
 
-    const trendData = useMemo(() => Array.from({ length: 24 }).map((_, i) => ({
-        time: `${(new Date().getHours() - (23 - i) + 24) % 24}:00`,
-        aqi: Math.floor(Math.random() * 100) + 100,
-    })), []);
 
-    const nearbyStations = useMemo(() => {
-        if (selectedLocation?.name.toLowerCase() === 'mumbai') {
-            return [
-                { id: 'm1', name: 'Colaba, Mumbai', distance: 2.1, aqi: 145 },
-                { id: 'm2', name: 'Worli, Mumbai', distance: 5.4, aqi: 128 },
-                { id: 'm3', name: 'Bandra Kurla Complex', distance: 8.2, aqi: 167 },
-                { id: 'm4', name: 'Sion, Mumbai', distance: 10.5, aqi: 192 },
-                { id: 'm5', name: 'Borivali East', distance: 22.1, aqi: 98 },
-            ];
-        }
+    const pollutantComparison = useMemo(() => {
+        // Prefer live selected location data
+        const p = liveSelectedLocation?.pollutants;
+
         return [
-            { id: '1', name: 'R.K. Puram', distance: 4.2, aqi: 234 },
-            { id: '2', name: 'Dwarka Sector 8', distance: 12.5, aqi: 187 },
-            { id: '3', name: 'NSIT Dwarka', distance: 15.1, aqi: 156 },
-            { id: '4', name: 'Sirifort', distance: 8.8, aqi: 210 },
-            { id: '5', name: 'Mandir Marg', distance: 10.2, aqi: 195 },
+            { name: 'PM2.5', unit: 'µg/m³', loc1Value: p?.pm25 || 156.4, loc2Value: 142.1 },
+            { name: 'PM10', unit: 'µg/m³', loc1Value: p?.pm10 || 245.2, loc2Value: 210.8 },
+            { name: 'NO2', unit: 'ppb', loc1Value: p?.no2 || 45.1, loc2Value: 38.4 },
+            { name: 'SO2', unit: 'ppb', loc1Value: p?.so2 || 12.4, loc2Value: 15.2 },
+            { name: 'CO', unit: 'ppm', loc1Value: p?.co || 2.1, loc2Value: 1.8 },
+            { name: 'O3', unit: 'ppb', loc1Value: p?.o3 || 34.0, loc2Value: 42.5 },
         ];
-    }, [selectedLocation]);
-
-    const pollutantComparison = useMemo(() => [
-        { name: 'PM2.5', unit: 'µg/m³', loc1Value: 156.4, loc2Value: 142.1 },
-        { name: 'PM10', unit: 'µg/m³', loc1Value: 245.2, loc2Value: 210.8 },
-        { name: 'NO2', unit: 'ppb', loc1Value: 45.1, loc2Value: 38.4 },
-        { name: 'SO2', unit: 'ppb', loc1Value: 12.4, loc2Value: 15.2 },
-        { name: 'CO', unit: 'ppm', loc1Value: 2.1, loc2Value: 1.8 },
-        { name: 'O3', unit: 'ppb', loc1Value: 34.0, loc2Value: 42.5 },
-    ], []);
+    }, [liveSelectedLocation]);
 
     return (
         <div className="container mx-auto max-w-6xl px-4 py-12 space-y-16">

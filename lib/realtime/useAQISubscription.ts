@@ -6,6 +6,10 @@ import { useAQIStore } from '@/store/aqiStore';
 import { AQReading } from '@/types/aqi';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
+// Singleton tracker to avoid multiple global subscriptions fighting over store state
+let globalChannelInstance: RealtimeChannel | null = null;
+let globalSubscriberCount = 0;
+
 export function useAQISubscription(locationId?: string) {
     const isConnectionActive = useAQIStore((state) => state.isConnectionActive);
     const setConnectionActive = useAQIStore((state) => state.setConnectionActive);
@@ -15,14 +19,23 @@ export function useAQISubscription(locationId?: string) {
     const supabase = createClient();
     const channelRef = useRef<RealtimeChannel | null>(null);
     const retryCountRef = useRef(0);
-    const MAX_RETRIES = 5;
+    const isGlobal = !locationId;
+    const MAX_RETRIES = 10; // Increased retries
 
     const subscribe = useCallback(() => {
-        // If already establishing or established, don't initiate again for this instance
+        // Guard against double subscription for THIS hook instance
         if (channelRef.current) return;
 
-        const channelName = `aqi-updates-${locationId || 'global'}`;
-        console.log(`[Realtime] Subscribing to ${channelName}...`);
+        // Special handling for the global channel to avoid concurrent connections
+        if (isGlobal && globalChannelInstance) {
+            console.log('[Realtime] Attaching to existing global channel singleton.');
+            channelRef.current = globalChannelInstance;
+            globalSubscriberCount++;
+            return;
+        }
+
+        const channelName = isGlobal ? 'aqi-updates-global' : `aqi-updates-${locationId}`;
+        console.log(`[Realtime] 🛰️ Initiating subscription: ${channelName}...`);
 
         const newChannel = supabase
             .channel(channelName)
@@ -36,7 +49,7 @@ export function useAQISubscription(locationId?: string) {
                 },
                 (payload) => {
                     const newReading = payload.new as any;
-                    console.log(`[Realtime] New reading recieved:`, newReading);
+                    console.log(`[Realtime] 📩 New reading received for ${locationId || 'global'}:`, newReading);
 
                     const formattedReading: AQReading = {
                         aqi: newReading.aqi_value,
@@ -60,47 +73,69 @@ export function useAQISubscription(locationId?: string) {
                 }
             )
             .subscribe((status, error) => {
-                console.log(`[Realtime] Status for ${channelName}: ${status}`, error || '');
-
                 const connected = status === 'SUBSCRIBED';
 
-                // Only update global state if we are the primary subscriber (global)
-                if (!locationId) {
-                    setConnectionActive(connected);
-                }
+                // Track status in console with more visibility
+                if (connected) {
+                    console.log(`[Realtime] ✅ ${channelName} is now LIVE.`);
+                    retryCountRef.current = 0;
+                } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                    console.error(`[Realtime] ❌ ${channelName} failed with status: ${status}.`, error?.message || 'Check if Realtime publication exists on aqi_readings table.');
 
-                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
                     if (retryCountRef.current < MAX_RETRIES) {
                         retryCountRef.current += 1;
-                        console.warn(`[Realtime] Connection failed. Retrying (${retryCountRef.current}/${MAX_RETRIES})...`);
+                        console.warn(`[Realtime] Retrying in ${2000 * retryCountRef.current}ms... (${retryCountRef.current}/${MAX_RETRIES})`);
                         setTimeout(() => {
-                            channelRef.current = null;
-                            subscribe();
+                            if (channelRef.current === newChannel) {
+                                channelRef.current = null;
+                                if (isGlobal) globalChannelInstance = null;
+                                subscribe();
+                            }
                         }, 2000 * retryCountRef.current);
                     }
-                } else if (connected) {
-                    retryCountRef.current = 0;
+                } else {
+                    console.log(`[Realtime] ℹ️ ${channelName} status change: ${status}`);
+                }
+
+                // Global state management
+                if (isGlobal) {
+                    setConnectionActive(connected);
                 }
             });
 
         channelRef.current = newChannel;
-    }, [locationId, supabase, setStoreReading, setConnectionActive]);
+        if (isGlobal) {
+            globalChannelInstance = newChannel;
+            globalSubscriberCount++;
+        }
+    }, [locationId, isGlobal, supabase, setStoreReading, setConnectionActive]);
 
     const unsubscribe = useCallback(() => {
         if (channelRef.current) {
-            console.log(`[Realtime] Unsubscribing from channel...`);
-            supabase.removeChannel(channelRef.current);
-            channelRef.current = null;
-            if (!locationId) {
-                setConnectionActive(false);
+            if (isGlobal) {
+                globalSubscriberCount--;
+                // Only remove the channel if NO other component is using it
+                if (globalSubscriberCount <= 0) {
+                    console.log(`[Realtime] 🛑 Last global subscriber disconnected. Closing channel...`);
+                    supabase.removeChannel(channelRef.current);
+                    globalChannelInstance = null;
+                    setConnectionActive(false);
+                    channelRef.current = null;
+                } else {
+                    console.log(`[Realtime] ✋ Detached from global channel. ${globalSubscriberCount} subscribers remaining.`);
+                    channelRef.current = null;
+                }
+            } else {
+                console.log(`[Realtime] 🛑 Closing filtered channel ${locationId}...`);
+                supabase.removeChannel(channelRef.current);
+                channelRef.current = null;
             }
         }
-    }, [supabase, locationId, setConnectionActive]);
+    }, [supabase, isGlobal, locationId, setConnectionActive]);
 
     useEffect(() => {
-        const timeout = setTimeout(() => {
-            subscribe();
-        }, 500); // Small delay to let client auth stabilize
+        // Short delay to prevent re-subscriptions during rapid navigation
+        const timeout = setTimeout(subscribe, 300);
 
         return () => {
             clearTimeout(timeout);
@@ -108,5 +143,5 @@ export function useAQISubscription(locationId?: string) {
         };
     }, [subscribe, unsubscribe]);
 
-    return { latestReading, isConnected: isConnectionActive, subscribe, unsubscribe };
+    return { latestReading, isConnected: isGlobal ? isConnectionActive : !!channelRef.current, subscribe, unsubscribe };
 }
