@@ -178,7 +178,16 @@ async function handleRequest(request: NextRequest) {
 
                     if (detectionResp.ok) {
                         const detectionData = await detectionResp.json();
+
+                        // NEW: Update the reading with the anomaly score
+                        await supabase
+                            .from("aqi_readings")
+                            .update({ anomaly_score: detectionData.anomaly_score } as any)
+                            .eq('location_id', loc.id)
+                            .eq('recorded_at', hourTruncated);
+
                         if (detectionData.anomaly_score > 6 || detectionData.sustained_anomaly) {
+
                             await fetch(`${baseUrl}/api/recommend`, {
                                 method: 'POST',
                                 body: JSON.stringify({

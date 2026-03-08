@@ -18,6 +18,8 @@ interface SourceDistribution {
 export interface PollutionSourceData {
     id: string;
     locationName: string;
+    latitude: number;
+    longitude: number;
     anomalyScore: number;
     sources: SourceDistribution[];
     lastDetected: string;
@@ -35,11 +37,16 @@ export function PollutionSourceCard({ data }: PollutionSourceCardProps) {
             const res = await fetch('/api/source-detection', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ locationId: data.id })
+                body: JSON.stringify({
+                    location_id: data.id,
+                    lat: data.latitude,
+                    lon: data.longitude
+                })
             });
             if (!res.ok) throw new Error('Detection failed');
             return res.json();
         },
+
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['source-metrics'] });
         }

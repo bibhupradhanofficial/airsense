@@ -1,85 +1,117 @@
 import { NextResponse } from 'next/server';
 import { classifyPollutionSource, computeAnomalyScore, detectSustainedAnomaly, AQReading, WeatherData } from '@/lib/ml/sourceDetection';
-// import { createClient } from '@/lib/supabase/server'; // Will implement full Supabase client in later phase
+import { createAdminClient } from '@/lib/supabase/server';
 
-// Mock Supabase fetch for demonstration purposes
-async function fetchRecentReadings(_locationId: string): Promise<AQReading[]> {
-    // In a real implementation:
-    // const supabase = createClient();
-    // const { data } = await supabase.from('readings').select('*').eq('location_id', locationId).order('timestamp', { ascending: false }).limit(24);
+async function fetchRecentReadings(locationId: string): Promise<AQReading[]> {
+    const supabase = await createAdminClient();
+    const { data } = await supabase
+        .from('aqi_readings')
+        .select('*')
+        .eq('location_id', locationId)
+        .order('recorded_at', { ascending: false })
+        .limit(24);
 
-    const now = new Date();
-    const mockReadings: AQReading[] = [];
+    if (!data || data.length === 0) return [];
 
-    // Generating 24 hours of mock data
-    for (let i = 0; i < 24; i++) {
-        const d = new Date(now.getTime() - i * 60 * 60 * 1000);
-        mockReadings.push({
-            timestamp: d.toISOString(),
-            aqi: 160 + Math.random() * 50, // Sustained high AQI
-            pm25: 80 + Math.random() * 20,
-            pm10: 170 + Math.random() * 30, // High PM10 (Construction signature)
-            no2: 40 + Math.random() * 10,
-            so2: 10 + Math.random() * 5,
-            co: 1 + Math.random(),
-            o3: 30 + Math.random() * 10
-        });
-    }
-    return mockReadings;
+    return (data as any[]).map(r => ({
+        timestamp: r.recorded_at,
+        aqi: r.aqi_value,
+        pm25: r.pm25,
+        pm10: r.pm10,
+        no2: r.no2,
+        so2: r.so2,
+        co: r.co,
+        o3: r.o3
+    }));
 }
 
-async function fetchCurrentWeather(_lat: number, _lon: number): Promise<WeatherData> {
-    // In a real implementation: Call OpenWeatherMap API
-    return {
-        windSpeed: 10, // low wind
-        windDirection: 180,
-        temperature: 30,
-        humidity: 50,
-    };
+async function fetchCurrentWeather(lat: number, lon: number): Promise<WeatherData> {
+    const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+
+    try {
+        const res = await fetch(`${baseUrl}/api/weather?lat=${lat}&lon=${lon}&type=current`);
+        if (!res.ok) throw new Error('Weather API failed');
+        const data = await res.json();
+        return {
+            windSpeed: data.wind_speed || 0,
+            windDirection: data.wind_direction || 0,
+            temperature: data.temperature || 0,
+            humidity: data.humidity || 0,
+        };
+    } catch (error) {
+        console.error('Error fetching weather for source detection:', error);
+        return { windSpeed: 0, windDirection: 0, temperature: 0, humidity: 0 };
+    }
 }
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { location_id, lat, lon } = body;
+        // Support both snake_case and camelCase
+        const location_id = body.location_id || body.locationId;
+        const lat = body.lat;
+        const lon = body.lon;
+        const fireRisk = body.fireRisk;
 
-        if (!location_id || !lat || !lon) {
-            return NextResponse.json({ error: 'Missing required parameters: location_id, lat, lon' }, { status: 400 });
+        if (!location_id) {
+            return NextResponse.json({ error: 'Missing required parameter: location_id' }, { status: 400 });
         }
 
         // 1. Fetch data
         const history = await fetchRecentReadings(location_id);
-        const weather = await fetchCurrentWeather(lat, lon);
 
         if (!history || history.length === 0) {
-            return NextResponse.json({ error: 'No historical readings found' }, { status: 404 });
+            return NextResponse.json({ error: 'No historical readings found for location: ' + location_id }, { status: 404 });
         }
 
-        const currentReading = history[0]; // Assuming sorted descending
+        const currentReading = history[0];
 
-        // 2. Fetch FIRMS fire risk data
-        const firmsRes = await fetch(
-            `${process.env.NEXT_PUBLIC_APP_URL}/api/firms?lat=${lat}&lon=${lon}&radius=300&days=2`
-        ).catch(() => null);
-        const firmsData = firmsRes?.ok ? await firmsRes.json() : null;
-        const fireRisk = firmsData?.riskAssessment ?? undefined;
+        // 2. Fetch weather if lat/lon provided, otherwise use latest reading weather
+        let weather: WeatherData;
+        if (lat && lon) {
+            weather = await fetchCurrentWeather(lat, lon);
+        } else {
+            // Fallback to weather data stored in the latest reading
+            const supabase = await createAdminClient();
+            const { data: latest } = await supabase
+                .from('aqi_readings')
+                .select('wind_speed, wind_direction, temperature, humidity')
+                .eq('location_id', location_id)
+                .order('recorded_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            weather = {
+                windSpeed: latest?.wind_speed || 0,
+                windDirection: latest?.wind_direction || 0,
+                temperature: latest?.temperature || 0,
+                humidity: latest?.humidity || 0
+            };
+        }
 
         // 3. Run Heuristic ML Rules
         const signatures = classifyPollutionSource(currentReading, weather, history, fireRisk);
         const anomalyScore = computeAnomalyScore(currentReading, history);
-        const isSustained = detectSustainedAnomaly(history, 6); // e.g., > 150 AQI for 6 hours
+        const isSustained = detectSustainedAnomaly(history, 6);
 
-        // 4. Save to database (mocked for now)
-        // const supabase = createClient();
-        // if (signatures.length > 0) {
-        //    await supabase.from('pollution_sources').insert({
-        //       location_id,
-        //       detected_source: signatures[0].sourceType,
-        //       confidence: signatures[0].confidence,
-        //       anomaly_score: anomalyScore,
-        //       fire_risk_data: fireRisk // ← NEWly integrated FIRMS data
-        //    });
-        // }
+        // 4. Save to database
+        const supabase = await createAdminClient();
+        if (signatures.length > 0) {
+            await supabase.from('pollution_sources').insert({
+                location_id,
+                source_type: signatures[0].sourceType,
+                confidence_score: signatures[0].confidence,
+                detected_at: new Date().toISOString(),
+                fire_risk_data: fireRisk || null,
+                raw_features: {
+                    anomaly_score: anomalyScore,
+                    is_sustained: isSustained,
+                    indicators: signatures[0].indicators,
+                    weather_at_detection: weather
+                } as any
+            });
+        }
 
         return NextResponse.json({
             location_id,
@@ -93,6 +125,6 @@ export async function POST(request: Request) {
 
     } catch (error: Error | any) {
         console.error('Error in source-detection API:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error: ' + error.message }, { status: 500 });
     }
 }

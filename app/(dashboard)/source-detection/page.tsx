@@ -31,10 +31,11 @@ const SOURCE_LABELS: Record<string, string> = {
 
 export default function SourceDetectionPage() {
     const supabase = createClient();
-    const { adminContext, cityName } = useAdminContext();
+    const { adminContext, cityName, isCentralAdmin } = useAdminContext();
     const { selectedCityId } = useAdminStore();
 
-    const activeCityName = selectedCityId || cityName;
+    const activeCityName = selectedCityId || cityName || (isCentralAdmin ? 'All Cities' : null);
+
 
     const [searchTerm, setSearchTerm] = useState('');
     const [filterSource, setFilterSource] = useState('all');
@@ -46,8 +47,9 @@ export default function SourceDetectionPage() {
             if (!adminContext) return [];
 
             // 1. Get locations
-            let locQuery = supabase.from('locations').select('*');
+            let locQuery = supabase.from('locations').select('id, name, latitude, longitude');
             locQuery = applyCityFilter(locQuery, adminContext, selectedCityId, true);
+
             const { data: locations, error: locError } = await locQuery;
             if (locError) throw locError;
             if (!locations.length) return [];
@@ -107,10 +109,13 @@ export default function SourceDetectionPage() {
                 return {
                     id: loc.id,
                     locationName: loc.name,
+                    latitude: loc.latitude,
+                    longitude: loc.longitude,
                     anomalyScore: latestAnomaly[loc.id] || 0,
                     lastDetected: locDetections[0]?.detected_at || new Date().toISOString(),
                     sources
-                } as PollutionSourceData;
+                } as any;
+
             }).sort((a, b) => b.anomalyScore - a.anomalyScore);
         },
         enabled: !!adminContext
@@ -118,21 +123,22 @@ export default function SourceDetectionPage() {
 
     const filteredData = useMemo(() => {
         if (!sourceData) return [];
-        return sourceData.filter(item => {
+        return sourceData.filter((item: any) => {
             const matchesSearch = item.locationName.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesFilter = filterSource === 'all' || item.sources.some(s => s.type.toLowerCase() === filterSource.toLowerCase());
+            const matchesFilter = filterSource === 'all' || item.sources.some((s: any) => s.type.toLowerCase() === filterSource.toLowerCase());
             return matchesSearch && matchesFilter;
         });
     }, [sourceData, searchTerm, filterSource]);
 
     const handleExport = () => {
         const headers = ['Location', 'Anomaly Score', 'Primary Source', 'Distribution'];
-        const rows = filteredData.map(item => [
+        const rows = filteredData.map((item: any) => [
             item.locationName,
             item.anomalyScore.toFixed(1),
             item.sources[0]?.type || 'N/A',
-            item.sources.map(s => `${s.type}:${s.percentage}%`).join(' | ')
+            item.sources.map((s: any) => `${s.type}:${s.percentage}%`).join(' | ')
         ]);
+
 
         const csvContent = "data:text/csv;charset=utf-8,"
             + headers.join(",") + "\n"
