@@ -112,7 +112,7 @@ export default function CitizenHomePage() {
                 onSkip={() => {
                     setShowPermissionModal(false);
                     sessionStorage.setItem('airsense_location_prompted', 'true');
-                    startLocationResolution();
+                    router.push('/search');
                 }}
             />
 
