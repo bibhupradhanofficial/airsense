@@ -168,7 +168,7 @@ export function AdminHeader() {
                 <div className="flex items-center space-x-2 bg-[#132238] border border-[#1e2a3b] rounded-full px-3 py-1">
                     <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500 animate-[pulse_2s_infinite]' : 'bg-gray-500'}`} />
                     <span className="text-[10px] font-bold tracking-widest text-white uppercase">
-                        {isConnected ? 'Live' : 'offline'}
+                        {isConnected ? 'Live' : 'Offline'}
                     </span>
                 </div>
 

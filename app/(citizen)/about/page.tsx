@@ -366,13 +366,13 @@ export default function AboutPage() {
                         </p>
                         <div className="flex gap-4">
                             <Button asChild variant="outline" size="icon" className="rounded-full hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200">
-                                <a href="https://github.com/bibhupradhanofficial" target="_blank" rel="noopener noreferrer">
-                                    <Github className="h-5 w-5" />
+                                <a href="https://www.linkedin.com/in/bibhupradhanofficial/" target="_blank" rel="noopener noreferrer">
+                                    <Linkedin className="h-5 w-5" />
                                 </a>
                             </Button>
                             <Button asChild variant="outline" size="icon" className="rounded-full hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200">
-                                <a href="https://www.linkedin.com/in/bibhupradhanofficial/" target="_blank" rel="noopener noreferrer">
-                                    <Linkedin className="h-5 w-5" />
+                                <a href="https://github.com/bibhupradhanofficial" target="_blank" rel="noopener noreferrer">
+                                    <Github className="h-5 w-5" />
                                 </a>
                             </Button>
                         </div>

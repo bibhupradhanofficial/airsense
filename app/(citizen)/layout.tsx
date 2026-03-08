@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Wind, Github } from 'lucide-react';
+import { Wind, Github, Linkedin } from 'lucide-react';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -96,8 +96,13 @@ export default function CitizenLayout({
                             <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-900">Connect</h3>
                             <ul className="mt-4 space-y-2 text-sm text-zinc-500">
                                 <li>
-                                    <a href="https://github.com" className="flex items-center gap-2 hover:text-teal-600 transition-colors">
-                                        <Github className="h-4 w-4" /> GitHub Project
+                                    <a href="https://www.linkedin.com/in/bibhupradhanofficial/" className="flex items-center gap-2 hover:text-teal-600 transition-colors">
+                                        <Linkedin className="h-4 w-4" /> LinkedIn
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="https://github.com/bibhupradhanofficial" className="flex items-center gap-2 hover:text-teal-600 transition-colors">
+                                        <Github className="h-4 w-4" /> GitHub
                                     </a>
                                 </li>
                             </ul>
