@@ -19,7 +19,7 @@ async function check() {
     }
 
     console.log('Listing invitations...');
-    const { data: invitations, error2 } = await supabase.from('admin_invitations').select('*').limit(10);
+    const { data: invitations, error: error2 } = await supabase.from('admin_invitations').select('*').limit(10);
     if (error2) {
         console.error('Error:', error2);
     } else {
