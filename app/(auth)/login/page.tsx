@@ -34,6 +34,15 @@ function LoginComponent() {
         } else if (message === 'session_expired') {
             setInfoMessage("Your session has expired. Please sign in again.");
             setInfoType('warning');
+        } else if (message === 'password_reset_success') {
+            setInfoMessage("Your password has been reset successfully. Please log in with your new password.");
+            setInfoType('success');
+        } else if (message === 'auth_error') {
+            setInfoMessage("Authentication error or link expired. Please request a new password reset link.");
+            setInfoType('warning');
+        } else if (message === 'access_denied') {
+            setInfoMessage("Access denied or recovery session expired. Please request a new link.");
+            setInfoType('warning');
         }
 
         if (message) {
@@ -155,7 +164,12 @@ function LoginComponent() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="password" className="text-xs uppercase tracking-wider text-gray-500 font-bold">Password</Label>
+                            <div className="flex justify-between items-center">
+                                <Label htmlFor="password" className="text-xs uppercase tracking-wider text-gray-500 font-bold">Password</Label>
+                                <Link href="/forgot-password" className="text-xs text-cyan-500 hover:text-cyan-400 font-semibold transition-colors">
+                                    Forgot password?
+                                </Link>
+                            </div>
                             <div className="relative">
                                 <Input
                                     id="password"
