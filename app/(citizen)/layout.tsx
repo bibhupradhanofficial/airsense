@@ -5,7 +5,9 @@ import { Wind, Github, Linkedin } from 'lucide-react';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: "AirSense | Real-time Air Quality for Your City",
+    title: {
+        absolute: "AirSense | Real-time Air Quality for Your City",
+    },
     description: "Track real-time AQI, pollution sources, and get personalized health advisories for any location in India. Powered by satellite data and AI.",
     openGraph: {
         title: "AirSense | Real-time Air Quality for Your City",
